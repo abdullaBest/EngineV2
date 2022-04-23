@@ -1,0 +1,21 @@
+{
+  "spec": {
+    "global": {}
+  },
+  "global": {
+    "land": {
+      "tiles": [
+           0
+      ],
+      "tile_width": 9,
+      "size": 32,
+      "layer_width": 1024,
+      "layer_cx": 16,
+      "hm_cx": 16,
+      "hm_max": 512,
+      "minimap_cx": 128
+    }
+  },
+  "user": {},
+  "lib": {}
+}

@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Engine</title>
+		<meta charset="utf-8">
+        <link rel="icon" href="i/favicon96.png" type="image/png" sizes="96x96" >
+		<link rel="stylesheet" href="css/main.css">
+		<script type="module" src="js/main.js?ver=0.001"></script>
+	</head>
+    <body>
+        <canvas id="CANVAS" width="800" height="600"></canvas>
+        
+        <div id="WAIT">
+            wait...
+        </div>
+
+        <div id="AUTH" style="display: none;">
+            <form id=".reg" name="registration" style="display: none;">
+                <ul>
+                    <li><label for="username">Name:</label></li>
+                    <li><input id=".name" type="text" name="name"></li>
+                    <li><label for="email">Email:</label></li>
+                    <li><input id=".email" type="email" name="email"></li>
+                    <li><label for="password">Password:</label></li>
+                    <li><input id=".pass" type="password" name="password"></li>
+                    <li><input id=".btn" type="submit" name="submit" value="Submit"></li>
+                </ul>
+                <button id=".switch_login">login</button>
+            </form>
+
+            <form id=".login" name="login" style="display: none;">
+                <ul>
+                    <li><label for="email">Email:</label></li>
+                    <li><input id=".email" type="email" name="email"></li>
+                    <li><label for="password">Password:</label></li>
+                    <li><input id=".pass" type="password" name="password"></li>
+                    <li><input id=".btn" type="submit" name="submit" value="Submit"></li>
+                </ul>
+                <button id=".switch_reg">reg</button>
+            </form>
+        </div>
+
+        <div id="ASSETS" component="dialog" class="dialog_window">
+            <div class="dialog">
+                <div>
+                    <div id=".tab_btn1" class="tab">Library</div>
+                    <div id=".tab_btn2" class="tab">Textures</div>
+                    <div id=".tab_btn3" class="tab">Models</div>
+                    <div class="title">Assets</div>
+                    <div class="close"></div>
+                </div>           
+                
+                <div>
+
+                    <div>1</div>
+
+                    <div id=".TEXTURES">
+                        <div id=".groups" component="list">
+                        </div>
+                        <div id=".list">
+                            <template id="txt_preview">
+                                <div class="item" data-n="${this.n}">
+                                    <img src="t/preview/${this.n}.png${this.a}">
+                                    <span>${this.t}</span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+
+                    <div id=".MODELS">
+
+                        <div id=".groups" component="list">
+                        </div>
+                        <div id=".list">
+                            <template id="model_preview">
+                                <div class="item" data-n="${this.n}">
+                                    <img src="m/preview/${this.n}.png${this.a}">
+                                    <span>${this.t}</span>
+                                </div>
+                            </template>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div>
+                    <div>
+                        
+                    </div>
+                    <div>
+                        <button id=".txt_add">add</button>
+                        <button id=".txt_edt">edit</button>
+                        <button id=".txt_sel">select</button>
+                    </div>
+                    <div>
+                        <button id=".model_add">add</button>
+                        <button id=".model_edt">edit</button>
+                        <button id=".model_sel">select</button>
+                    </div>
+                </div>
+                
+            </div>
+        </div>        
+        
+        <div id="TXT_LOAD" component="dialog" class="dialog_window" style="display: none;">
+            <div class="dialog">
+                <div>
+                    <div class="title">Texture loader</div>
+                    <div class="close"></div>
+                </div> 
+    
+                <div style="display: flex;overflow: auto;">
+
+                    <div style="width:150px;margin:5px 5px 5px 5px;">
+                        <label class="file_btn">...
+                            <input id=".file" type="file">
+                        </label>
+                        <div id=".file_name" style="overflow-wrap: anywhere"></div>
+                        <div id=".o_size"></div>
+
+                        <input id=".n" type="number" value=1 disabled>
+
+                        <input id=".group" type="text" list="textures_group_names" placeholder="group">
+                        <datalist id="textures_group_names"></datalist>
+                        <input id=".name" type="text"  placeholder="name">
+                        <input id=".width" type="number">
+                        x
+                        <input id=".height" type="number">
+
+                        <div>
+                            format:
+                            <select id=".type">
+                                <option value=0>ETC1S</option>
+                                <option value=1>UASTC</option>
+                                <option value=2>PNG</option>
+                            </select>
+                        </div>
+
+                        <label>alpha:<input id=".alpha" type="checkbox"></label>
+                        <label>mipmap:<input id=".mipmap" type="checkbox"></label>
+                        <label>normalmap:<input id=".normalmap" type="checkbox"></label>
+                           
+                        <button id=".save">save</button>
+                    </div>
+                    <div style="flex-grow:1;overflow: auto;margin:5px 5px 5px 0;">
+                        <img id=".img" style="max-width: 512px;max-height: 512px;">
+                    </div>
+                 
+                </div>
+            </div>
+        </div>   
+
+        <div id="MODEL_EDIT" component="dialog" class="dialog_window" style="left:0px; top:100px; width:320px; height:600px;">
+            <div class="dialog">
+                <div>
+                    <div class="title">Model</div>
+                    <div class="close"></div>
+                </div> 
+
+                <div>
+                    <div>
+                        <label class="file_btn">...
+                            <input id=".file" type="file">
+                        </label>
+                        <input id=".n" type="number" disabled>
+                        <input id=".group" type="text" list="models_group_names" placeholder="group">
+                        <datalist id="models_group_names"></datalist>
+
+                        <input id=".name" type="text">
+                        |
+                        <button id=".bhide">hide</button>
+                    </div>
+                    <div>
+                        <div id=".vis">
+                            scale:<input id=".scale" type="number" value=1>
+                            |
+                            <button id=".switch">hide/show</button>
+                            |
+                            <button id=".tolib">to lib</button>
+                        </div>
+                        <div id=".scene" component="list">
+                        </div>
+                        <div id=".tabs">
+                            <button id=".t_material">material</button>
+                            <button id=".t_transform">transform</button>
+                            <button id=".t_animations">animations</button>
+                        </div>
+                        <div id=".material">
+                            <table>
+                                <tr>
+                                    <td>material:</td>
+                                    <td>
+                                        <select id=".material">
+                                            <option value="MeshBasicMaterial">Basic</option>
+                                            <option value="MeshStandardMaterial">Standard</option>
+                                            <option value="Grass">Grass</option>
+                                        </select>
+                                    </td>
+                                    <td><button id=".clear">x</button></td>
+                                </tr>
+                            </table>
+                            <table>
+                                <tr>
+                                    <td>defuse</td>
+                                    <td>normals</td>
+                                    <td>arm</td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <img id=".defuse" data-n="0" src="">
+                                    </td>
+                                    <td>    
+                                        <img id=".normals" data-n="0" src="">
+                                    </td>
+                                    <td>
+                                        <img id=".arm" data-n="0" src="">
+                                    </td>	
+                                </tr>
+                            </table>
+                            <table>
+                                <tr>
+                                    <td>metalness:</td>
+                                    <td>
+                                        <input id=".metalness" type="number" value="0" step="0.1">
+                                    </td>
+                                    <td>roughness:</td>
+                                    <td>
+                                        <input id=".roughness" type="number" value="0" step="0.1">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>transparent:</td>
+                                    <td>
+                                        <input id=".transparent" type="checkbox">
+                                    </td>
+                                    <td>double side:</td>
+                                    <td>
+                                        <input id=".dside" type="checkbox">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>alpha test:</td>
+                                    <td>
+                                        <input id=".alphatest" type="number" value="0" step="0.1">
+                                    </td>
+                                    <td>environment:</td>
+                                    <td>
+                                        <select id=".env">
+                                            <option value=""></option>
+                                            <option value="grass">grass</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            </table>
+                            <button id=".apply">применить</button>
+                        </div>
+                        <div id=".transform">
+                            <table>
+                            <tr>
+                                <td>
+                                    scale:
+                                </td>
+                                <td>
+                                    <input id=".s_x" type="number" value="1.0">
+                                    <input id=".s_y" type="number" value="1.0">
+                                    <input id=".s_z" type="number" value="1.0">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    pos:
+                                </td>
+                                <td>
+                                    <input id=".p_x" type="number" value="0.0">
+                                    <input id=".p_y" type="number" value="0.0">
+                                    <input id=".p_z" type="number" value="0.0">
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    rot:
+                                </td>
+                                <td>
+                                    <input id=".r_x" type="number" value="0.0">
+                                    <input id=".r_y" type="number" value="0.0">
+                                    <input id=".r_z" type="number" value="0.0">
+                                </td>
+                            </tr>
+                        </table>
+                        <button id=".clean">С‡РёСЃС‚РєР°</button>
+                        <button id=".remove_group">СѓР±СЂР°С‚СЊ РіСЂСѓРїРїСѓ</button>
+                    </div>
+                    <div id=".animations">
+                        <div>
+                            <select id=".list"></select>
+                        </div>
+                        <button id=".play">play</button>
+                        <button id=".stop">stop</button>
+                        <button id=".mem">mem</button>
+                        <div>
+                            <input id=".new_name" type="text">
+                            <button id=".rename">rename</button>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div id="LAND" component="dialog" class="dialog_window" style="left:0px; top:100px; width:280px; height:600px;">
+            <div class="dialog">
+                <div>
+                    <div id=".tab_btn1" class="tab">Paint</div>
+                    <div id=".tab_btn2" class="tab">HeightMap</div>
+                    <div id=".tab_btn3" class="tab">Conf</div>
+                    <div class="title">LAND</div>
+                    <div class="close"></div>
+                </div>           
+                
+                <div>
+
+                    <div id=".PAINT"> 
+                        <div id=".conf">
+                            size:<input id=".size" type="number" min=0.5 max=6 step=0.5 value=4>
+                            <button id=".btn_rep">r</button>
+                            <button id=".btn_add">+</button>
+                            <button id=".btn_del">-</button>
+                            |
+                            <button id=".btn_save">save</button>
+                        </div>
+                        <div id=".masks">
+                            <template id="mask_preview">
+                                <img data-n="${this.n}" src="/l/mask${this.n}.png">
+                            </template>
+                        </div>
+                        <div id=".tiles">
+                            <template id="tile_preview">
+                                <img data-n="${this.i}" src="/t/preview/${this.n}.png">
+                            </template>
+                        </div>
+
+                    </div>
+
+                    <div id=".HM">
+                        
+                    </div>
+
+
+                    <div id=".CONF">
+                        <div id=".layers">
+                            layers:
+                            <div>
+                                texture0 scale
+                                <div>
+                                    <input id=".texture0scale_range" class="range_input"  type="range"  min=0.1 max=64 step=0.1 value="8">
+                                    <input id=".texture0scale_input" class="number_input" type="number" min=0.1 max=64 step=0.1 value="8">
+                                </div>
+                                texture scale
+                                <div>
+                                    <input id=".texturescale_range" class="range_input"  type="range"  min=0.1 max=64 step=0.1 value="8">
+                                    <input id=".texturescale_input" class="number_input" type="number" min=0.1 max=64 step=0.1 value="8">
+                                </div>
+                                size:
+                                <div>
+                                    <select id=".size">
+                                        <option value="64">64</option>
+                                        <option value="128">128</option>
+                                        <option value="256">256</option>
+                                        <option value="512">512</option>
+                                        <option value="1024">1024</option>
+                                        <option value="2048">2048</option>
+                                        <option value="4096">4096</option>
+                                        <option value="8192">8192</option>
+                                    </select>
+                                </div>
+
+                            </div>
+    
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div style="display: none;">
+                    <div>                        
+                    </div>
+                    <div>
+                    </div>
+                    <div>
+                    </div>
+                </div>
+                
+            </div>
+        </div>        
+        
+    </body>      
+</html>

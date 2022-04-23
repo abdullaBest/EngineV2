@@ -1,0 +1,389 @@
+/*
+    BODY
+*/
+body{
+    padding:0;
+    margin:0;
+    user-select:none;
+    background-color:black;
+    overflow:hidden;
+    font-family:Arial;
+    overflow: hidden;
+    height: 100%;
+}
+
+/*
+button{
+    display: inline-block;
+    margin: 0 0.1em;
+    padding: 0.1em 0.6em;
+    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI","Liberation Sans",sans-serif;
+    font-size: 11px;
+    line-height: 1.4;
+    color: hsl(210,8%,15%);
+    text-shadow: 0 1px 0 hsl(0,0%,100%);
+    background-color: hsl(210,8%,90%);
+    border: 1px solid hsl(210,8%,65%);
+    border-radius: 3px;
+    box-shadow: 0 1px 1px hsla(210,8%,5%,0.15),inset 0 1px 0 0 hsl(0,0%,100%);
+    white-space: nowrap;
+}
+*/
+
+.dialog_window{
+    display:block;
+    position:absolute;
+    left:calc(50% - 405px); 
+    top:calc(50% - 335px); 
+    width:810px; 
+    height:670px;
+    border:1px solid #818181
+}
+
+.number_input{
+    display: table-cell;
+    border:none;
+    background-color: inherit;
+    width: 50px;
+    outline: none;
+    color: white;
+    vertical-align: middle;
+}
+
+.range_input{
+    vertical-align: middle;
+    width: 130px;
+}
+
+.range2_input{
+    vertical-align: middle;
+    width: 100px;
+}
+
+.color_input{
+    display: table-cell;
+    width: 30px;
+    vertical-align: middle;
+    border: none;
+    margin: 0;
+    padding: 0;
+    outline: none;
+}
+
+
+input[type="range"]{
+    -webkit-appearance: none;
+    border-radius: 0px;
+    height: 6px;
+    background-color: #aa9c77;
+}
+
+input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none !important;
+    background-color: hsl(0, 0%, 67%);
+    height: 15px;
+    width: 10px;
+}
+
+
+#CANVAS{
+    z-index: 0;
+}
+
+
+#WAIT{
+    display:none;
+    position: absolute;
+    width: 200px;
+    height: 50px;
+    left: calc(50% - 100px);
+    top: calc(50% - 25px);
+    background-color: white;
+    text-align: center;
+    font-size: 40px;
+    z-index: 200;
+    border:1px solid black;
+}
+
+/*
+    AUTH
+*/
+#AUTH{
+    background-color: white;
+    width: 300px;
+    height: 300px;
+    position: absolute;
+    left: calc(50% - 150px);
+    top: calc(50% - 150px);
+    z-index: 100;
+}
+
+#AUTH form li {
+    list-style: none;
+    margin-bottom: 5px;
+}
+
+#AUTH form ul li label{
+    width: 100px;
+    text-align: right;
+    margin-right: 10px;
+    font-family:Verdana, Arial, Helvetica, sans-serif;
+    font-size:14px;
+}
+    
+#AUTH form ul li input{
+    margin-bottom: 10px;
+}
+    
+#AUTH\.reg\.btn {
+    font-size:18px
+}
+#AUTH\.login\.btn {
+    font-size:18px
+}
+
+/*
+    TEXTURES
+*/
+
+#TXT_LOAD input{
+    border:0;
+    padding: 0;
+    margin: 0 0 1px 1px;
+    height: 24px;
+}
+
+#TXT_LOAD\.n, #TXT_LOAD\.width, #TXT_LOAD\.height{
+    width:70px;
+}
+#TXT_LOAD\.type{
+    width:70px;
+}
+#TXT_LOAD\.file{
+    display: none;
+}
+#TXT_LOAD\.group, #TXT_LOAD\.name{
+    width:100%;
+}
+#TXT_LOAD\.save{
+    color:black;
+    width:50px;
+}
+
+#TXT_LOAD label{
+    display: block;
+    width: 100px;
+    text-align: center;
+    clear: both;
+}
+
+#TXT_LOAD label>input{
+    float: right;
+}
+
+.file_btn{
+    width: 30px;
+    display: inline-grid;
+    border: 1px solid #b5b5b5;
+    border-radius: 5px;
+    text-align: center;
+    cursor: pointer;
+}
+
+#ASSETS\.TEXTURES {
+    display: flex;
+    height: 100%;
+}
+
+#ASSETS\.TEXTURES\.groups {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: auto;
+    align-self: auto;
+    order: 0;
+    font-size: 1em;
+    min-width: 140px;
+    max-width: 140px;
+}
+
+#ASSETS\.TEXTURES\.list {
+    flex-grow: 4;
+    overflow: auto;
+    margin: 0;
+}
+
+#ASSETS\.TEXTURES\.list .item{
+    display: inline-grid;
+    border: 1px solid rgb(128 128 128 / 0%);
+    word-break: break-all;
+    width: 128px;
+}
+
+#ASSETS\.TEXTURES\.list .item:hover{
+    border: 1px solid rgb(128 128 128 / 100%);
+}
+
+#ASSETS\.TEXTURES\.list .sel{
+    border: 1px solid rgb(0 0 0 / 100%);
+}
+
+/*
+    MODELS
+*/
+
+
+
+#ASSETS\.MODELS {
+    display: flex;
+    height: 100%;
+}
+
+#ASSETS\.MODELS\.groups {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: auto;
+    align-self: auto;
+    order: 0;
+    font-size: 1em;
+    min-width: 140px;
+    max-width: 140px;
+}
+
+#ASSETS\.MODELS\.list {
+    flex-grow: 4;
+    overflow: auto;
+    margin: 0;
+}
+
+#ASSETS\.MODELS\.list .item{
+    display: inline-grid;
+    border: 1px solid rgb(128 128 128 / 0%);
+    word-break: break-all;
+    width: 128px;
+}
+
+#ASSETS\.MODELS\.list .item:hover{
+    border: 1px solid rgb(128 128 128 / 100%);
+}
+
+#ASSETS\.MODELS\.list .sel{
+    border: 1px solid rgb(0 0 0 / 100%);
+}
+
+
+#MODEL_EDIT input{
+    border:0;
+    padding: 0;
+    margin: 0 0 1px 1px;
+    height: 24px;
+}
+
+#MODEL_EDIT\.file{
+    display: none;
+}
+
+#MODEL_EDIT\.n{
+    width: 20px;
+}
+
+#MODEL_EDIT button{
+    color:black;
+}
+
+#MODEL_EDIT\.group{
+    width:100px;
+}
+#MODEL_EDIT\.name{
+    width:100px;
+}
+
+#MODEL_EDIT\.scene{
+    height:250px;
+    width:300px;
+    overflow:auto;
+}
+
+#MODEL_EDIT\.scene div{
+    margin: 0 0 0 4px;
+}
+
+#MODELS\.scene div span{
+    background-color: #666;
+}
+
+#MODEL_EDIT\.scene div span:hover{
+    background-color: blue;
+}
+
+#MODEL_EDIT\.material\.defuse{
+    width: 64px;
+}
+#MODEL_EDIT\.material\.normals{
+    width: 64px;
+}
+#MODEL_EDIT\.material\.arm{
+    width: 64px;
+}
+
+#MODEL_EDIT input[type=number]{
+    width:50px;
+}
+
+#MODEL_EDIT\.transform{
+    display: none;
+}
+#MODEL_EDIT\.animations{
+    display: none;
+}
+#MODEL_EDIT\.animations\.new_name{
+    width:150px;
+}
+
+/*
+    LAND
+*/
+#LAND\.PAINT{
+    flex-direction: column;
+    height: 100%;
+}
+
+#LAND\.PAINT\.masks img{
+    width: 40px;
+    float: left;
+    border: 1px solid rgb(128 128 128 / 0%);
+}
+
+#LAND\.PAINT\.masks img:hover{
+    border: 1px solid rgb(128 128 128 / 100%);
+}
+
+#LAND\.PAINT\.masks .sel{
+    border: 1px solid rgb(244 255 0);
+}
+
+#LAND\.PAINT\.tiles{
+    overflow: auto;
+}
+
+#LAND\.PAINT button{
+    color:black;
+}
+
+#LAND\.PAINT\.tiles img{
+    width: 64px;
+    float: left;
+    border: 1px solid rgb(128 128 128 / 0%);
+}
+
+#LAND\.PAINT\.tiles img:hover{
+    border: 1px solid rgb(128 128 128 / 100%);
+}
+
+#LAND\.PAINT\.tiles .sel{
+    border: 1px solid rgb(0 0 0);
+}
+
+#LAND\.CONF{
+    flex-direction: column;
+    height: 100%;
+}

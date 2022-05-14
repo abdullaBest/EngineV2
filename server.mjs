@@ -90,20 +90,20 @@ const messagesJSON = (user,s)=>{
             let id     = parseInt(s[1])
             let width  = parseInt(s[2])
             let height = parseInt(s[3])
-            EDITOR.set_bigmap(id,width,height)
+            //EDITOR.set_bigmap(id,width,height)
         }
         break;
         case INFO.MSG_EDITOR_SAVE_LAYER:{
             let id     = parseInt(s[1])
             let width  = parseInt(s[2])
             let height = parseInt(s[3])
-            EDITOR.set_layer(id,width,height)
+            EDITOR.set_pic(id,width,height,7)
         }
         break;
         case INFO.MSG_EDITOR_SAVE_HM:{
             let id     = parseInt(s[1])
             let width  = parseInt(s[2])
-            EDITOR.set_heightmap(id,width)
+            EDITOR.set_pic(id,width,width,8)
         }
         break;
         /*
@@ -412,18 +412,19 @@ const messageBINARY = (user,message)=>{
                 break;
         //---------------------------
         case 5 :
-                EDITOR.set_glb(user,message)
-                break
         case 6 :
                 EDITOR.set_glb(user,message)
                 break
-    
+        case 7 :
+                EDITOR.save_layer(message)
+                break;
+        case 8 :
+                EDITOR.save_heightmap(message)
+                break;
+            
         /*
         case 5 :
                 EDITOR.save_bigmap(message)
-                break;
-        case 6 :
-                EDITOR.save_layer(message)
                 break;
         case 7 : 
                 EDITOR.save_heightmap(message)

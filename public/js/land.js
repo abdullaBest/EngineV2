@@ -1,8 +1,9 @@
-import * as RENDER  from './render.js'
-import * as CHUNK   from './chunk.js'
-import * as UTILS   from './utils.js'
-import * as ASSET   from './assets.js'
-import * as INFO    from './info.mjs'
+import * as RENDER    from './render.js'
+import * as CHUNK     from './chunk.js'
+import * as UTILS     from './utils.js'
+import * as ASSETS    from './assets.js'
+import * as INFO      from './info.mjs'
+import * as HEIGHTMAP from './heightmap.js'
 import {
     Scene,
     WebGLRenderTarget,
@@ -35,17 +36,12 @@ import { Vector2 } from '../lib/three.js'
 
 const _path                     = '/l/'
 
-export const masks              = new Array(16).fill(null)    // маски
 export const tiles              = new Array(64).fill(null)    // тайловые текстуры
 
 let main_layer_width            = 1024             // размер текстуры на блок
 let ground_material  = null
 let minimap_material = null
 
-let heightmap                   = null
-export let heightmap_grid_cx    = 16               // количество точек в чанке
-let heightmap_max               = 512              // максимальная высота
-let heightmap_tile_size         = 0                // размер тайла карта высот
 
 export let minimap_mesh         = null
 let minimap_grid_cx             = 128
@@ -55,8 +51,8 @@ let layer_list                  = null              //
 let layer_grid_cx               = 16                // количество точек в одном чанке
 let layer0_texture_scale        = 8                 // размер текстуры заливки
 let layer_texture_scale         = 8                 // размер текстуры в сетке
+let layer_normal_factor         = 0.04              // сила изменения направления нормали для освещения
 
-let grid                        = null              // массив всех сеток
 let ground_mesh                 = null
 
 
@@ -103,99 +99,8 @@ const sprite_mesh = new Mesh(UTILS.pass_geometry, new ShaderMaterial({
     transparent : true,
 }))
 
-const fill_mesh   = new Mesh(UTILS.pass_geometry,new ShaderMaterial({
-    uniforms: {
-        map  : { value: null },
-        scale: { value: 1.0 },
-    },
-    vertexShader: [
-        'varying vec2 lUv;',
-        'void main() {',
-            'lUv = uv;',
-            'gl_Position = vec4(position,1.0);',
-        '}'].join(''),
-    fragmentShader: [
-        'uniform sampler2D map;',
-        'uniform float scale;',
-        'varying vec2 lUv;',
-        'void main(){',
-            'vec2 uv1 = vec2((lUv.x*scale-0.5),(lUv.y*scale-0.5));',
-            'vec4 cmap = texture2D(map, uv1);',
-            'gl_FragColor = cmap;',
-        '}'].join(''),
-    side: DoubleSide,
-    depthTest: false,
-    depthWrite: false,
-    transparent: false,
-}))
-
-const sprite_mesh2 = new Mesh(UTILS.pass_geometry, new ShaderMaterial({
-    uniforms: {
-        mask : { value: null },
-        map  : { value: null },
-        scale: { value: 1.0  },
-        gsize: { value: 1.0  },
-        o    : { value: new Vector2(0,0) },
-        u    : { value: new Vector2(0,0) },
-    },
-    vertexShader: [
-        'varying vec2 lUv;',
-        'varying vec2 lUv2;',
-        'uniform float scale;',
-        'uniform float gsize;',
-        'uniform vec2 o;',
-        'uniform vec2 u;',
-        'void main() {',
-            'lUv = uv;',
-            'lUv2 = vec2(uv.x*scale*gsize,uv.y*scale*gsize);',
-            'gl_Position = vec4( o.x + position.x*scale, o.y + position.y*scale, 0.0, 1.0 );',
-        '}'].join(''),
-    fragmentShader: [
-        'uniform sampler2D mask;',
-        'uniform sampler2D map;',
-        'varying vec2 lUv;',
-        'varying vec2 lUv2;',
-        'void main(){',
-            'gl_FragColor = vec4( texture2D(map, lUv2).rgb, texture2D(mask, lUv).a);',
-        '}'].join(''),
-    side        : DoubleSide,
-    depthTest   : false,
-    depthWrite  : false,
-    transparent : true,
-}))
-// подготавливает карту высот нужного размера, 
-// заливает поверхность ровной землей
-const prepare_heightmap = (_heightmap_grid_cx,_heightmap_max) => {
-    if (heightmap!==null){
-        heightmap.dispose()
-    }
-
-    heightmap_grid_cx = _heightmap_grid_cx
-    
-    heightmap_max = _heightmap_max
-    
-    heightmap_tile_size = CHUNK.r_width/heightmap_grid_cx
-
-    /*
-    if (heightmap_clone!==null){
-        heightmap_clone.dispose()
-        heightmap_clone = null
-    }
-    */
-    heightmap = new WebGLRenderTarget(
-        CHUNK.count_x * heightmap_grid_cx, CHUNK.count_y * heightmap_grid_cx,
-        {
-            minFilter    : LinearFilter, //NearestFilter, //LinearFilter,
-            magFilter    : LinearFilter, //NearestFilter, //LinearFilter,
-            format       : RGBAFormat,
-            depthBuffer  : false,
-            stencilBuffer: false
-        }
-    )
-    //
-    RENDER.target_fill(heightmap,0.5,0.5,0.5)
-    //
-}
+export const getGrid = ()=>layer_grid
+export const getWidth = ()=>layer_grid_cx*CHUNK.count_x
 
 const prepare_ground_material = ()=>{
 
@@ -215,25 +120,22 @@ const prepare_ground_material = ()=>{
         stencilZPass : ReplaceStencilOp, 
     })
 
-    const step = (1/(heightmap_grid_cx*CHUNK.count_x)).toFixed(6)
-    const maxw = CHUNK.max_width.toFixed(2)
-    const halfw = CHUNK.half_max_width.toFixed(2)
-    
-    //console.log(CHUNK.count_x,maxw)
-
     ground_material.onBeforeCompile=(shader,renderer)=>{
         let u = shader.uniforms
         ground_material.uniforms = u
-        u.hmap      = { value: heightmap.texture },
+        u.hmap      = { value: null },
         //u.nmap      = { value: noise_texture },
         u.ox        = { value: 0.0 },
         u.oy        = { value: 0.0 },
         //
-        u.mask      = { value: masks[2] },
+        u.mask      = { value: ASSETS.getMask(2) },
         u.mx        = { value: 0.0 },
         u.my        = { value: 0.0 },
         u.size      = { value: 1.0 },
         u.level     = { value: 0.0 },
+        u.normalf   = { value: 0.0 },
+        u.hstep     = { value: 0.0 },
+        u.maxw      = { value: 0.0 },
 
         //console.log(shader.vertexShader)
         //console.log(shader.fragmentShader)
@@ -243,9 +145,13 @@ const prepare_ground_material = ()=>{
             [
                 '#define LAMBERT',
                 'uniform sampler2D hmap;',
+                'uniform float hmax;',
                 'uniform float ox;',
                 'uniform float oy;',
+                'uniform float normalf;',
                 'varying vec4 rp;',
+                'uniform float maxw;',
+                'uniform float hstep;',
             ].join('\n')
         )
     
@@ -253,12 +159,12 @@ const prepare_ground_material = ()=>{
             '#include <beginnormal_vertex>',
             [
                 'rp = vec4(ox+position.x,0.0,oy+position.z,0.0);',
-                'vec2 _v = vec2( rp.x/'+maxw+', rp.z/'+maxw+' );', //+'+step+'
-                'float _h1 = texture2D(hmap, vec2( _v.x, _v.y-'+step+') ).r;',
-                'float _h2 = texture2D(hmap, vec2( _v.x-'+step+', _v.y) ).r;',
-                'float _h3 = texture2D(hmap, vec2( _v.x+'+step+', _v.y) ).r;',
-                'float _h4 = texture2D(hmap, vec2( _v.x, _v.y+'+step+') ).r;',
-                'vec3 _n = vec3(_h2-_h3, 0.04, _h1-_h4);',
+                'vec2 _v = vec2( rp.x/maxw, rp.z/maxw );', //+'+step+'
+                'float _h1 = texture2D(hmap, vec2( _v.x, _v.y-hstep) ).r;',
+                'float _h2 = texture2D(hmap, vec2( _v.x-hstep, _v.y) ).r;',
+                'float _h3 = texture2D(hmap, vec2( _v.x+hstep, _v.y) ).r;',
+                'float _h4 = texture2D(hmap, vec2( _v.x, _v.y+hstep) ).r;',
+                'vec3 _n = vec3(_h2-_h3, normalf, _h1-_h4);',
                 'vec3 objectNormal = _n;', //normalize(_n);',
             ].join('\n')
         )
@@ -266,9 +172,7 @@ const prepare_ground_material = ()=>{
         shader.vertexShader = shader.vertexShader.replace(
             '#include <begin_vertex>',
             [
-                'vec4 hd = texture2D(hmap, vec2( _v.x, _v.y ));',
-                'rp.y = (hd.r - 0.5)*'+heightmap_max.toFixed(1)+';',
-                'rp.y = 0.0;',
+                'rp.y = texture2D(hmap, vec2( _v.x, _v.y )).r;',
                 'vec3 transformed = vec3(position.x,rp.y,position.z);',
              ].join('\n')
         )
@@ -317,11 +221,13 @@ const prepare_ground_material = ()=>{
 
 const prepare_minimap_material = ()=>{
 
-    const step = (1/(heightmap_grid_cx*CHUNK.count_x)).toFixed(6)
+    const step = (1/HEIGHTMAP.getWidth()).toFixed(6)
 
     if (minimap_material!==null){
         minimap_material.dispose()
     }
+
+    const maxHeight = HEIGHTMAP.getMaxHeight()
 
     minimap_material = new ShaderMaterial({
         uniforms: {
@@ -342,11 +248,11 @@ const prepare_minimap_material = ()=>{
                 'float y = 0.0;',
                 'if (position.x>d[0] && position.x<d[1] && position.z>d[2] && position.z<d[3]){',
                     //'y = 0.0;',
-                    'y = -0.5*'+heightmap_max.toFixed(1)+';',
+                    'y = -0.5*'+maxHeight.toFixed(1)+';',
                     //'alpha = 0.0;',
                 '}else{',
                     'vec4 hd = texture2D(hmap, uv);',
-                    'y = (hd.r - 0.5)*'+heightmap_max.toFixed(1)+';',
+                    'y = (hd.r - 0.5)*'+maxHeight.toFixed(1)+';',
                     //'alpha = 1.0-smoothstep( 16000000.0, 17000000.0, position.x*position.x+position.z*position.z);',
                     '}',
                 'gl_Position = projectionMatrix*modelViewMatrix*vec4(position.x,y,position.z,1.0);',
@@ -382,12 +288,50 @@ const prepare_minimap_material = ()=>{
 
 export const prepare_tiles = (list)=>{
     for (let i=0;i<list.length;i++){
-        tiles[i] = ASSET.get_texture(list[i], INFO.MCFLAG_LAND )
+        tiles[i] = ASSETS.get_texture(list[i], INFO.MCFLAG_LAND )
     }
 
     if (RENDER.check_callback_flag(INFO.MCFLAG_LAND)===0){
         refresh_layers()
     }
+
+}
+
+export const setConf = (t0_scale,t_scale,size)=>{
+    layer0_texture_scale = t0_scale
+    layer_texture_scale = t_scale
+    if (main_layer_width!==size){
+        free()
+        main_layer_width = size
+        prepare_viewport()
+    }
+        
+    refresh_layers()
+}
+
+export const setNormalF = (normalf)=>{
+    layer_normal_factor = normalf
+}
+
+export const updateGroundMeshGeometry = ()=>{
+
+    const geometry = UTILS.generate_grid(
+        CHUNK.r_width, 
+        CHUNK.r_width, 
+        HEIGHTMAP.get_grid_cx(),
+        HEIGHTMAP.get_grid_cx(),
+        0,
+        0
+    )
+
+    if (ground_mesh!==null ){
+        if (ground_mesh.geometry!==null){
+            ground_mesh.geometry.dispose()
+        }
+        ground_mesh.geometry = geometry
+    }
+
+    return geometry
 
 }
 
@@ -410,41 +354,21 @@ const prepare_map = ( _main_layer_width, _layer_grid_cx, _minimap_cx)=>{
     }
     // 
 
-
-    // подготавливаем сетку
-    grid = new Array(CHUNK.count_y*CHUNK.count_x).fill(null)
-    for (let y = 0; y < CHUNK.count_y; y++) {
-        for (let x = 0; x < CHUNK.count_x; x++) {
-            grid[y*CHUNK.count_x + x] = Object.seal({
-                x     : x*CHUNK.r_width,
-                y     : y*CHUNK.r_width,
-                layer : (y*CHUNK.count_x+x)*layer_grid_cx*3,
-            })
-        }
-    }
     // подготавливаем проекции
     //projection_grid = new Uint8Array( CHUNK.count_x * CHUNK.count_y * (projection_cx * projection_cy *3*2))
     //projection_grid.fill(0)
     //
-    if (ground_mesh!==null){
-        ground_mesh.geometry.dispose()
-        minimap_mesh.geometry.dispose()
-    }
 
-    let geometry = UTILS.generate_grid(
-        CHUNK.r_width, 
-        CHUNK.r_width, 
-        heightmap_grid_cx, 
-        heightmap_grid_cx,
-        0,
-        0
-    )
+    let geometry = updateGroundMeshGeometry()
 
     ground_mesh = new Mesh(geometry,ground_material)
     ground_mesh.castShadow = false
     ground_mesh.receiveShadow = false //true
 
     //
+    if (minimap_mesh!==null){
+        minimap_mesh.geometry.dispose()
+    }
     geometry = UTILS.generate_grid(
         CHUNK.max_width, 
         CHUNK.max_width, 
@@ -501,9 +425,10 @@ const prepare_viewport = ()=>{
     }
 }
 
+
 export const create_map = (_heightmap_grid_cx, _heightmap_max, _main_layer_width, _layer_grid_cx, _minimap_cx)=>{
     //
-    prepare_heightmap(_heightmap_grid_cx, _heightmap_max)
+    HEIGHTMAP.prepare(_heightmap_grid_cx, _heightmap_max)
     //
     prepare_map(_main_layer_width, _layer_grid_cx, _minimap_cx)
     //
@@ -523,19 +448,19 @@ export const render_block = (x,y,ground)=>{
     //m.matrixWorldNeedsUpdate = false
     m.material.map = ground.texture
 
-    const r = RENDER.renderer
-    const p = r.abd_prepareObject( m, RENDER.scene, RENDER.camera, m.material )
-    const u = p.getUniforms()
-    r.abd_setValue(u,'hmap', heightmap.texture)
-    //r.abd_setValue(u,'nmap', noise_texture)
-    r.abd_setValue(u,'map', ground.texture)
-    r.abd_setValue(u,'ox', rx)
-    r.abd_setValue(u,'oy', ry)
-    r.abd_setValue(u,'mask', masks[2])
-    r.abd_setValue(u,'mx', ground_mesh.material.uniforms.mx.value)
-    r.abd_setValue(u,'my', ground_mesh.material.uniforms.my.value)
-    r.abd_setValue(u,'size', ground_mesh.material.uniforms.size.value)
-    r.abd_renderObject( m, m.geometry, m.material, p )
+    RENDER.setProgram(m)
+    RENDER._setValue('hmap', HEIGHTMAP.getTexture())
+    RENDER._setValue('map', ground.texture)
+    RENDER._setValue('ox', rx)
+    RENDER._setValue('oy', ry)
+    RENDER._setValue('mask', ASSETS.getMask(2))
+    RENDER._setValue('mx', ground_mesh.material.uniforms.mx.value)
+    RENDER._setValue('my', ground_mesh.material.uniforms.my.value)
+    RENDER._setValue('size', ground_mesh.material.uniforms.size.value)
+    RENDER._setValue('normalf',layer_normal_factor)
+    RENDER._setValue('hstep',HEIGHTMAP.getStep())
+    RENDER._setValue('maxw',CHUNK.max_width)
+    RENDER._renderObject(m)
 }
 //--------------------------------------------------
 // подготавливает список для отрисовки и сортирует по слоям
@@ -582,10 +507,10 @@ const make_layer_list = (cx,cy)=>{
 }
 
 // отрисовывает чанк
-const _layer_render_no_sort = (cx, cy, target) => {
+const _layer_paint_no_sort = (cx, cy, target) => {
     RENDER._renderStart(target)
 
-    // заоиваем основой
+    // заливаем основой
     RENDER._setProgram( sprite_mesh )
 
     let gsize = layer0_texture_scale*0.5
@@ -598,7 +523,7 @@ const _layer_render_no_sort = (cx, cy, target) => {
     RENDER._setValue('oy', -cy*layer0_texture_scale)
     RENDER._setValue('gsize', gsize)
 
-    RENDER._setValue('mask',  masks[1])
+    RENDER._setValue('mask',  ASSETS.getMask(1))
     RENDER._setValue('map',   tiles[0])
     RENDER._setValue('scale', scale)
     RENDER._setValue('rx', rx)
@@ -638,7 +563,7 @@ const _layer_render_no_sort = (cx, cy, target) => {
                 RENDER._setValue('oy', -cy*layer_texture_scale)
                 RENDER._setValue('gsize', gsize)
 
-                RENDER._setValue('mask',  masks[m])
+                RENDER._setValue('mask',  ASSETS.getMask(m))
                 RENDER._setValue('map', tiles[t])
                 RENDER._setValue('scale', s)
                 RENDER._setValue('rx', ox)
@@ -655,7 +580,7 @@ const _layer_render_no_sort = (cx, cy, target) => {
     RENDER._renderEnd()
 }
 
-const _layer_render = (cx, cy, target) => {
+const _layer_paint = (cx, cy, target) => {
     RENDER._renderStart(target)
 
     // заливаем основой
@@ -667,7 +592,7 @@ const _layer_render = (cx, cy, target) => {
     RENDER._setValue('oy', -cy*layer0_texture_scale)
     RENDER._setValue('gsize', gsize)
 
-    RENDER._setValue('mask',  masks[1])
+    RENDER._setValue('mask',  ASSETS.getMask(1))
     RENDER._setValue('map',   tiles[0])
     RENDER._setValue('scale', 1.0)
     RENDER._setValue('rx', 0)
@@ -707,7 +632,7 @@ const _layer_render = (cx, cy, target) => {
         RENDER._setValue('oy', -cy*layer_texture_scale)
         RENDER._setValue('gsize', gsize)
 
-        RENDER._setValue('mask',  masks[m])
+        RENDER._setValue('mask',  ASSETS.getMask(m))
         RENDER._setValue('map', tiles[t])
         RENDER._setValue('scale', s)
         RENDER._setValue('rx', ox)
@@ -727,7 +652,7 @@ export const repaint_layer = (cx,cy)=>{
             if (x >= 0 && y >= 0 && x < CHUNK.count_x && y < CHUNK.count_y) {
                 let g = CHUNK.get(x,y)
                 if (g.viewport !== null) {
-                    _layer_render(x, y, g.viewport.ground)
+                    _layer_paint(x, y, g.viewport.ground)
                     //g.viewport.grass_ready = false
                 }
             }
@@ -744,8 +669,7 @@ export const refresh_layers = ()=>{
 }
 
 export const layer_render = (x,y,ground)=>{
-    if (grid===null){ return false}
-    _layer_render(x, y, ground)
+    _layer_paint(x, y, ground)
     return true
 }
 
@@ -803,7 +727,7 @@ export const set_point = (rx, ry, mask, txt, size) => {
                 let g = CHUNK.get(x,y)
                 if (g.viewport !== null) {
                     make_layer_list(x,y)
-                    _layer_render(x, y, g.viewport.ground)
+                    _layer_paint(x, y, g.viewport.ground)
                 }
             }
         }
@@ -820,43 +744,68 @@ export const set_mask_position = (x,y,size)=>{
 }
 
 //--------------------------------------------------
-export const setConf = (t0_scale,t_scale,size)=>{
-    layer0_texture_scale = t0_scale
-    layer_texture_scale = t_scale
-    if (main_layer_width!==size){
-        free()
-        main_layer_width = size
-        prepare_viewport()
+// переносим загруженные слои на наши слои
+const update_layer = (e)=>{
+    let layer_image = e.target
+    let canvas = document.createElement('canvas')
+    canvas.width = layer_image.width
+    canvas.height = layer_image.height
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(layer_image, 0, 0)
+    let d = ctx.getImageData(0, 0, layer_image.width, layer_image.height)
+    let ii = 0
+    for (let i=0;i<d.data.length;i=i+4){
+        layer_grid[ii+0] = d.data[i+0]
+        layer_grid[ii+1] = d.data[i+1]
+        layer_grid[ii+2] = d.data[i+2]
+        ii=ii+3
     }
-        
+    d = null
+    layer_image = null
+    canvas = null
+
+    for (let y=0; y<CHUNK.count_y; y++) {
+        for (let x=0; x<CHUNK.count_x; x++) {
+            make_layer_list(x,y)
+         }
+    }
+
     refresh_layers()
 }
 
-export const prepare = new Promise((resolve,reject)=>{
-
-    let c = masks.length-1
-    // загружаем маски
-    const check_load = () => {
-        c = c - 1
-        if (c === 0) {
-            resolve()
-        }
+export const load = (map_id)=>{
+    // загружаем раскраску - слои
+    const layer_image = new Image()
+    layer_image.onload = (e)=>{
+        update_layer(e)
+        //count = count - 1
+        //if (count===0){
+        //    resolve()
+        //}
     }
+    layer_image.src = _path+'layer_'+map_id+'.png?'+Date.now()
 
-    // загружаем текстуры
-    const count = masks.length
-    for (let i=1; i<count; i++) {
-        const t = RENDER.textureloader.load(_path+'mask'+i+'.png', check_load )
+    //create_map()
+/*
+    return new Promise((resolve,reject)=>{
+        //
+        let count = 3
 
-        t.generateMipmaps = false
-        t.magFilter       = LinearFilter  //NearestFilter //LinearFilter
-        t.minFilter       = LinearFilter  //NearestFilter //NearestFilter
-        t.anisotropy      = 1
-        t.wrapS           = RepeatWrapping
-        t.wrapT           = RepeatWrapping
+        const loader = new TextureLoader()
+        loader.setPath(_path)
+        
+        // загружаем миникарту
+        loader.load('map_'+map_id+'.png?'+Date.now(), (texture)=>{
+            minimap_mesh.material.uniforms.map.value = texture
+            count = count - 1
+            if (count===0){
+                resolve()
+            }
+        })
+    })
+*/
+}
 
-        masks[i] = t
-    }
+export const prepare = ()=>{
 
- 
-})
+}

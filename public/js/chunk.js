@@ -131,6 +131,11 @@ export const transfer = (o,x,y)=>{
 export const get = (x,y)=>chunks[y*count_x+x]
 // 
 // ---------------------------------------------------
+export const setTileWidth = (width)=>{
+    r_width = width
+    max_width = count_x*r_width
+    half_max_width = max_width*0.5
+}
 
 // обновляем центр камеры и соотвественно запускаеться обновление видимых блоков
 export const update_viewport = (rx, ry) => {

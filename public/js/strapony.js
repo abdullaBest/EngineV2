@@ -13,7 +13,7 @@ export const show = e=>e.el.style.display = 'block'
 export const hide = e=>e.el.style.display = 'none'
 export const isVisible = e=>e.el.style.display === 'block'
 //   
-class strapony {
+class o {
     constructor(){
         this.el    = null
         this._call = null
@@ -102,7 +102,7 @@ export const prepare = new Promise((resolve,reject)=>{ // подготовка
             let name = s[i]
             let b = a[name]
             if (b===undefined){     
-                b = new strapony()
+                b = new o()
                 a[name] = b
             }
             a = b

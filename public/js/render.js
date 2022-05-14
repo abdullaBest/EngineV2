@@ -44,9 +44,13 @@ import {
     Float32BufferAttribute,
     DepthTexture,
     DepthFormat,
+    RedFormat,
     DepthStencilFormat,
 	UnsignedShortType,
     UnsignedInt248Type,
+    UnsignedIntType,
+    UnsignedByteType,
+    LuminanceFormat,
 
     ACESFilmicToneMapping,
     ReinhardToneMapping,
@@ -59,7 +63,6 @@ import {
     SphereGeometry,
     MeshBasicMaterial,
     MeshStandardMaterial,
-    RedFormat,
     RawShaderMaterial,
     BoxGeometry,
     Matrix4,
@@ -97,7 +100,11 @@ let manager_callback   = empty_func
 export const raycaster = new Raycaster()
 export const mouse     = new Vector3()
 export const position  = new Vector2()
-const color            = new Color()
+
+const color = new Color()
+const _a    = new Vector3()
+const _b    = new Vector3()
+const _c    = new Vector3()
 
 let _program = null
 let _uniforms = null
@@ -614,6 +621,71 @@ export const new_mixer = (obj)=>{
     return new AnimationMixer( obj )
 }
 
+
+export const ray_vs_triangle = (a,b,c)=>{
+    /*
+        raycaster.ray.origin.x = o[0]
+        raycaster.ray.origin.y = o[1]
+        raycaster.ray.origin.z = o[2]
+        raycaster.ray.direction.x = d[0]
+        raycaster.ray.direction.y = d[1]
+        raycaster.ray.direction.z = d[2]
+    */
+        _a.x = a[0]
+        _a.y = a[1]
+        _a.z = a[2]
+        _b.x = b[0]
+        _b.y = b[1]
+        _b.z = b[2]
+        _c.x = c[0]
+        _c.y = c[1]
+        _c.z = c[2]
+        return raycaster.ray.intersectTriangle(_a,_b,_c,false,mouse)
+    }
+
+export const targetCreate = (width,height)=>{
+    const t = new WebGLRenderTarget(
+        width, height,
+        {
+            minFilter    : LinearFilter,  //NearestFilter, //LinearFilter,
+            magFilter    : NearestFilter, //NearestFilter, //LinearFilter,
+            format       : RGBAFormat,
+            depthBuffer  : false,
+            stencilBuffer: false
+        }
+    )
+
+    return t
+}
+
+export const targetFloatCreate = (width,height)=>{
+    const t = new WebGLRenderTarget(
+        width, height,
+        {
+            minFilter    : LinearFilter,  //NearestFilter, //LinearFilter,
+            magFilter    : LinearFilter,  //NearestFilter, //LinearFilter,
+            format       : RedFormat,
+            type         : FloatType, //UnsignedShortType, //UnsignedIntType, //FloatType,
+            depthBuffer  : false,
+            stencilBuffer: false
+        }
+    )
+    t.texture.internalFormat = 'R32F'
+    return t
+}
+
+export const get_target_pixels = (t)=>{
+    const _data = new Uint8Array(t.width*t.height*4)
+    renderer.readRenderTargetPixels ( t, 0, 0, t.width, t.height, _data)
+    return _data
+}
+
+export const get_target_floats = (t)=>{
+    const _data = new Float32Array(t.width*t.height)
+    renderer.readRenderTargetPixels ( t, 0, 0, t.width, t.height, _data)
+    return _data
+}
+
 export const target_to_cavas = (t)=>{
     const _data = new Uint8Array(t.width*t.height*4)
     renderer.readRenderTargetPixels ( t, 0, 0, t.width, t.height, _data)
@@ -640,6 +712,14 @@ export const target_to_cavas = (t)=>{
     return canvas
     //document.body.appendChild(canvas)
 
+}
+
+export const target_copy = (source,dest)=>{
+    _renderStart(dest)
+    _setProgram( screen_copy )
+    _setValue('map', source.texture)
+    _renderObject( screen_copy)
+    _renderEnd()
 }
 
 export const target_to_cavas_part = (t,x,y,w,h)=>{
@@ -724,6 +804,12 @@ export const _setProgram = (m)=>{
     _program = renderer.abd_prepareObject( m, empty_scene, orto_camera, m.material )
     _uniforms = _program.getUniforms()
 }
+
+export const setProgram = (m)=>{
+    _program = renderer.abd_prepareObject( m, scene, camera, m.material )
+    _uniforms = _program.getUniforms()
+}
+
 
 export const _setValue = (name,value)=>{
     renderer.abd_setValue( _uniforms, name, value )

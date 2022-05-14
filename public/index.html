@@ -314,7 +314,7 @@
             <div class="dialog">
                 <div>
                     <div id=".tab_btn1" class="tab">Paint</div>
-                    <div id=".tab_btn2" class="tab">HeightMap</div>
+                    <div id=".tab_btn2" class="tab">Height</div>
                     <div id=".tab_btn3" class="tab">Conf</div>
                     <div class="title">LAND</div>
                     <div class="close"></div>
@@ -333,7 +333,7 @@
                         </div>
                         <div id=".masks">
                             <template id="mask_preview">
-                                <img data-n="${this.n}" src="/l/mask${this.n}.png">
+                                <img data-n="${this.n}" src="/t/masks/${this.n}.png">
                             </template>
                         </div>
                         <div id=".tiles">
@@ -345,7 +345,20 @@
                     </div>
 
                     <div id=".HM">
-                        
+                        <div id=".conf">
+                            size:<input id=".size" type="number" min=0.5 max=100 step=0.5 value=1.5>
+                            power:<input id=".power" type="number" min=0.001 max=1 step=0.05 value=0.01>
+                            <div>
+                                <button id=".add">add</button>
+                                <button id=".sub">sub</button>
+                                <button id=".solid">solid</button>
+                                <button id=".blur">blur</button>
+                                |
+                                <button id=".btn_save">save</button>
+                            </div>
+                        </div>
+                        <div id=".masks">
+                        </div>
                     </div>
 
 
@@ -353,12 +366,12 @@
                         <div id=".layers">
                             layers:
                             <div>
-                                texture0 scale
+                                texture0 scale:
                                 <div>
                                     <input id=".texture0scale_range" class="range_input"  type="range"  min=0.1 max=64 step=0.1 value="8">
                                     <input id=".texture0scale_input" class="number_input" type="number" min=0.1 max=64 step=0.1 value="8">
                                 </div>
-                                texture scale
+                                texture scale:
                                 <div>
                                     <input id=".texturescale_range" class="range_input"  type="range"  min=0.1 max=64 step=0.1 value="8">
                                     <input id=".texturescale_input" class="number_input" type="number" min=0.1 max=64 step=0.1 value="8">
@@ -376,7 +389,34 @@
                                         <option value="8192">8192</option>
                                     </select>
                                 </div>
-
+                                width:
+                                <div>
+                                    <input id=".rwidth_range" class="range_input"  type="range"  min=0.1 max=128 step=0.1 value="9">
+                                    <input id=".rwidth_input" class="number_input" type="number" min=0.1 max=128 step=0.1 value="9">
+                                </div>
+                                normal:
+                                <div>
+                                    <input id=".normalf_range" class="range_input"  type="range"  min=0.01 max=2 step=0.01 value="0.04">
+                                    <input id=".normalf_input" class="number_input" type="number" min=0.01 max=2 step=0.01 value="0.04">
+                                </div>
+                                <button id=".restore">restore</button>
+                            </div>
+    
+                        </div>
+                        <div id=".hm">
+                            heightmap:
+                            <div>
+                                maxHeight
+                                <div>
+                                    <input id=".maxheight_range" class="range_input"  type="range"  min=1 max=512 step=1 value="8">
+                                    <input id=".maxheight_input" class="number_input" type="number" min=1 max=512 step=1 value="8">
+                                </div>
+                                grid cx:
+                                <div>
+                                    <input id=".gridcx_range" class="range_input"  type="range"  min=1 max=512 step=1 value="32">
+                                    <input id=".gridcx_input" class="number_input" type="number" min=1 max=512 step=1 value="32">
+                                </div>
+                                <button id=".restore">restore</button>
                             </div>
     
                         </div>

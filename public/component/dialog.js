@@ -15,6 +15,8 @@ let _minW = 200,
 	_dialogContent = null,
 	_dialogButtonPane = null,
 	a = $._components.dialog
+
+	this.dialog_active_tab = 0
 	
 const _onMouseDown = (evt) => {
 	const a = $._components.dialog
@@ -293,6 +295,7 @@ const showTab = e=>{
 	_dialogContent.children[n].style.display = 'flex'
 	_dialogButtonPane.children[n].style.display = 'block'
 	_tabs_buttons[n].classList.add('active')
+	this.dialog_active_tab = n
 }
 
 _dialogContent = _dialog.children[0].children[1]
@@ -320,7 +323,9 @@ if (a._dialog===undefined){
 close_button = _dialog.querySelector('.close')
 if (close_button) {
 	close_button.innerHTML = '&#x2716'
-	close_button.addEventListener('click', () => _dialog.style.display = 'none')
+	close_button.addEventListener('click', () => {
+		_dialog.style.display = 'none'
+	})
 }
 
 if (_dialogButtonPane){

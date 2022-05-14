@@ -342,22 +342,22 @@ input[type='range']::-webkit-slider-thumb {
 /*
     LAND
 */
-#LAND\.PAINT{
+#LAND\.PAINT, #LAND\.HM {
     flex-direction: column;
     height: 100%;
 }
 
-#LAND\.PAINT\.masks img{
+#LAND\.PAINT\.masks img, #LAND\.HM\.masks img{
     width: 40px;
     float: left;
     border: 1px solid rgb(128 128 128 / 0%);
 }
 
-#LAND\.PAINT\.masks img:hover{
+#LAND\.PAINT\.masks img:hover, #LAND\.HM\.masks img:hover{
     border: 1px solid rgb(128 128 128 / 100%);
 }
 
-#LAND\.PAINT\.masks .sel{
+#LAND\.PAINT\.masks .sel, #LAND\.HM\.masks .sel{
     border: 1px solid rgb(244 255 0);
 }
 
@@ -386,4 +386,25 @@ input[type='range']::-webkit-slider-thumb {
 #LAND\.CONF{
     flex-direction: column;
     height: 100%;
+}
+
+#LAND\.CONF\.layers{
+    margin: 10px 0 0 0;
+    color: rgb(196, 196, 196);
+}
+
+#LAND\.CONF\.layers div{
+    margin: 0 0 0 10px;
+    color: white;
+}
+
+#LAND\.CONF\.hm{
+    margin: 10px 0 0 0;
+    border-top: 1px solid gray;
+    color: rgb(196, 196, 196);
+}
+
+#LAND\.CONF\.hm div{
+    margin: 0 0 0 10px;
+    color: white;
 }

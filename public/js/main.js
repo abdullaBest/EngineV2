@@ -2,19 +2,20 @@
     
     copyright 2019-2022 Hamzin Abdulla (abdulla_best@mail.ru)
 */
-import * as INFO    from './info.mjs'
-import * as GUI     from './strapony.js'
-import * as AUTH    from './auth.js'
-import * as NET     from './net.js'
-import * as RENDER  from './render.js'
-import * as CONTROL from './controls.js'
-import * as CAMERA  from './camera_orbit.js'
-import * as LAND    from './land.js'
-import * as CHUNK   from './chunk.js'
+import * as INFO      from './info.mjs'
+import * as GUI       from './strapony.js'
+import * as AUTH      from './auth.js'
+import * as NET       from './net.js'
+import * as RENDER    from './render.js'
+import * as CONTROL   from './controls.js'
+import * as CAMERA    from './camera_orbit.js'
+import * as LAND      from './land.js'
+import * as CHUNK     from './chunk.js'
+import * as ASSETS    from './assets.js'
+import * as HEIGHTMAP from './heightmap.js'
 
 import { prepare as texture_prepare, set_texture} from './editor/textures.js' 
 import { prepare as models_prepare, render as models_editor_render, fbx_converted, set_model } from './editor/models.js' 
-import { prepare as assets_prepare } from './assets.js'
 import { prepare as land_prepare, prepare_game as land_prepare_game, set_mouse_position, set_point} from './editor/land.js' 
 
 let ping_timer = 0
@@ -84,20 +85,52 @@ const camera_control = ()=>{
     }
 }
 
+const mouse_over_grid = (_x,_y)=>{
+
+    RENDER.mouse.x = _x
+    RENDER.mouse.y = _y
+    RENDER.mouse.z = 0.0
+    RENDER.raycaster.setFromCamera( RENDER.mouse, RENDER.camera )
+
+    if (RENDER.raycaster.ray.direction.y>=0){
+        return
+    }
+
+    if (!HEIGHTMAP.ray_vs_heightmap(
+        RENDER.raycaster.ray.origin.x,
+        RENDER.raycaster.ray.origin.y,
+        RENDER.raycaster.ray.origin.z,
+        RENDER.raycaster.ray.direction.x,
+        RENDER.raycaster.ray.direction.y,
+        RENDER.raycaster.ray.direction.z
+    )){
+        return false
+    }
+
+    RENDER.mouse.y = RENDER.mouse.z
+
+    return true
+}
+
+
 const editor_tick = ()=>{
 
-    RENDER.mouse_over_grid(CONTROL.mouse.ox, CONTROL.mouse.oy)
+    mouse_over_grid(CONTROL.mouse.ox, CONTROL.mouse.oy)
     let rx = RENDER.mouse.x + CHUNK.half_max_width
     let ry = RENDER.mouse.y + CHUNK.half_max_width
 
     // рисуем на поверхности
     if (editor_mode===0){
-        set_mouse_position(0,rx,ry)
+        set_mouse_position(rx,ry)
     }
 
     if ( CONTROL.mouse.btn_active & (CONTROL.MOUSE_BTN_LEFT+CONTROL.MOUSE_CLICK)!==0) {
         CONTROL.click_release()
-        set_point(0,rx, ry)
+        set_point(rx, ry)
+    }else{
+        if (HEIGHTMAP.needs_update_data){
+            HEIGHTMAP.update_heightmap_data()
+        }
     }
 }
 
@@ -169,7 +202,7 @@ const on_message = (type,m)=>{
         // активируем редактор
         case INFO.MSG_EDITOR_INIT:
             console.log(m)
-            assets_prepare(m.t,m.m)
+            ASSETS.prepareEditor(m.t,m.m)
 
             LAND.prepare_tiles([0])
 
@@ -205,6 +238,9 @@ const on_message = (type,m)=>{
                 global.land.layer_cx,
                 global.land.minimap_cx,
             )
+
+            LAND.load(NET.game_id)
+            HEIGHTMAP.load(NET.game_id)
 
             CAMERA.orbit_set_zone(
                 -CHUNK.half_max_width,
@@ -289,8 +325,9 @@ const manager_callback = (f)=>{
 // Подготовка
 Promise.all([
     GUI.prepare,
-    LAND.prepare
+    ASSETS.prepare,
 ]).then(()=>{
+    LAND.prepare()
     AUTH.prepare()
 
     NET.prepare(on_message,AUTH.on_message)

@@ -12,12 +12,9 @@ let _games   = null
 let games    = []
 
 export let mode   = 0      //
-let group    = ''   //
-let name     = ''   //
 let n        = 0    //
 let width    = 0    //
 let height   = 0
-let type     = 0    // 0-deffuse, 1-defuse+alpha, 2-normal, 3-arm 
 let texture_data = null
 let model_data = null
 
@@ -351,7 +348,15 @@ export const save_hexgrid = (id,data)=>{
     console.log('hexgrid saved')
 }
 
-// сохраняем текстуру карты 
+// сохраняем текстуру  
+export const set_pic = (_n,_width,_height,_mode)=>{
+    n      = _n
+    width  = _width
+    height = _height
+    mode   = _mode
+}
+
+
 export const set_bigmap = (_n,_width,_height)=>{
     n      = _n
     width  = _width
@@ -390,14 +395,6 @@ export const save_bigmap = (message)=>{
         })
 }
 
-
-export const set_layer = (_n,_width,_height)=>{
-    n      = _n
-    width  = _width
-    height = _height
-    mode   = 6
-}
-
 export const save_layer = (message)=>{
     let img_png = new PNG.PNG({width: width, height: height, colorType:2})  
     let b = Buffer.from(message)
@@ -420,25 +417,18 @@ export const save_layer = (message)=>{
         })
 }
 
-export const set_heightmap = (_n,_width)=>{
-    n      = _n
-    width  = _width
-    height = _width
-    mode   = 7
-}
-
 export const save_heightmap = (message)=>{
-    let img_png = new PNG.PNG({width: width, height: height, colorType:0})  
+    let img_png = new PNG.PNG({width: width, height: height, colorType:2})  
     let b = Buffer.from(message)
     let i = 0
     for (var y = 0; y < img_png.height; y++) {
         for (var x = 0; x < img_png.width; x++) {
             var idx = (img_png.width * y + x) << 2;
             img_png.data[idx + 0] = b[i+0]
-            img_png.data[idx + 1] = b[i+0]
-            img_png.data[idx + 2] = b[i+0]
+            img_png.data[idx + 1] = b[i+1]
+            img_png.data[idx + 2] = b[i+2]
             img_png.data[idx + 3] = 255
-            i=i+1
+            i=i+3
         }
     }
 

@@ -1,8 +1,9 @@
 import { ktx2loader, textureloader, gltfloader, traverse, get_MeshStandardMaterial, get_MeshBasicMaterial, set_callback_flag, call_manager_callback } from '/js/render.js'
-import { RepeatWrapping } from '/lib/three.js'
+import { RepeatWrapping, LinearFilter, NearestFilter } from '/lib/three.js'
 
 let textures = []
-let models = []
+let models   = []
+const masks = new Array(16).fill(null)    // маски
 
 let requestCount = 0
 
@@ -130,7 +131,34 @@ export const get_model = (n,callback)=>{
     }
 }
 
-export const prepare = (_textures,_models)=>{
+export const getMask = n => masks[n]
+export const getMasksCount = () => masks.length
+
+export const prepareEditor = (_textures,_models)=>{
     textures = _textures
     models = _models
 }
+
+export const prepare = new Promise((resolve,reject)=>{
+    let c = masks.length - 1
+    const check = ()=>{
+        c = c - 1
+        if (c===0){
+            resolve()
+        }
+    }
+    // загружаем маски
+    const count = masks.length
+    for (let i=1; i<count; i++) {
+        const t = textureloader.load('/t/masks/'+i+'.png', check)
+
+        t.generateMipmaps = false
+        t.magFilter       = LinearFilter   //NearestFilter LinearFilter
+        t.minFilter       = NearestFilter  
+        t.anisotropy      = 1
+        t.wrapS           = RepeatWrapping
+        t.wrapT           = RepeatWrapping
+
+        masks[i] = t
+    }
+})

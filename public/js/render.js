@@ -95,7 +95,6 @@ let main_render_before = empty_func
 let main_render        = empty_func
 let main_render_shadow = empty_func
 let main_render_after  = empty_func
-let manager_callback   = empty_func
 
 export const raycaster = new Raycaster()
 export const mouse     = new Vector3()
@@ -108,8 +107,6 @@ const _c    = new Vector3()
 
 let _program = null
 let _uniforms = null
-
-let callback_flag = 0
 
 export const deg_to_rad = deg => deg*Math.PI/180
 export const rad_to_deg = rad => rad*180/Math.PI
@@ -208,9 +205,6 @@ const prepare_light =()=>{
   
 }
 
-export const set_callback_flag = (f)=> { callback_flag = callback_flag | f }
-export const check_callback_flag = (f)=> callback_flag & f
-
 export const update_matrix = (m)=>{
     m.matrixWorld.compose( m.position, m.quaternion, m.scale )
 
@@ -266,7 +260,7 @@ export const update_matrix = (m)=>{
 
 export const render_mesh = (m)=>{
 
-    if (m.isMesh || m.isSkinnedMesh) {
+    if (m.isMesh || m.isSkinnedMesh || m.isLine) {
         if ( renderer.abd_frustum(m) ){
             renderer.abd_render_obj ( m, scene, camera, m.material )
         }
@@ -278,7 +272,7 @@ export const render_mesh = (m)=>{
         while(p!==l.length){
 
             const o = l[p]
-            if (o.isMesh || o.isSkinnedMesh) {
+            if (o.isMesh || o.isSkinnedMesh || o.isLine) {
                 if ( renderer.abd_frustum(o) ){
                     renderer.abd_render_obj ( o, scene, camera, o.material )
                 }
@@ -622,6 +616,99 @@ export const new_mixer = (obj)=>{
 }
 
 
+const dot = ( a,b )=> a[0]*b[0] + a[1]*b[1] + a[2]*b[2]
+
+const crossVectors = ( r, a, b )=>{
+    r[0] = a[1] * b[2] - a[2] * b[1]
+    r[1] = a[2] * b[0] - a[0] * b[2]
+    r[2] = a[0] * b[1] - a[1] * b[0]
+}
+
+const cross = ( a,b )=>a[0]*b[1] - a[1]*b[0]
+
+export const intersectTriangle = ( origin, direction, a, b, c, backfaceCulling, target )=>{
+
+    // Compute the offset origin, edges, and normal.
+
+    // from https://github.com/pmjoniak/GeometricTools/blob/master/GTEngine/Include/Mathematics/GteIntrRay3Triangle3.h
+
+    const _edge1    = [0,0,0]
+    const _edge2    = [0,0,0]
+    const _edge3    = [0,0,0]
+    const _normal$1 = [0,0,0]
+    const _diff     = [0,0,0]
+
+    _edge1[0] = b[0] - a[0]
+    _edge1[1] = b[1] - a[1]
+    _edge1[2] = b[2] - a[2]
+
+    _edge2[0] = c[0] - a[0]
+    _edge2[1] = c[1] - a[1]
+    _edge2[2] = c[2] - a[2]
+
+    crossVectors( _normal$1, _edge1, _edge2 )
+
+    // Solve Q + t*D = b1*E1 + b2*E2 (Q = kDiff, D = ray direction,
+    // E1 = kEdge1, E2 = kEdge2, N = Cross(E1,E2)) by
+    //   |Dot(D,N)|*b1 = sign(Dot(D,N))*Dot(D,Cross(Q,E2))
+    //   |Dot(D,N)|*b2 = sign(Dot(D,N))*Dot(D,Cross(E1,Q))
+    //   |Dot(D,N)|*t = -sign(Dot(D,N))*Dot(Q,N)
+    let DdN = dot( direction, _normal$1 )
+    let sign;
+
+    if ( DdN > 0 ) {
+
+        if ( backfaceCulling ) return null
+        sign = 1
+
+    } else if ( DdN < 0 ) {
+        sign = - 1
+        DdN = - DdN
+    } else {
+        return null
+    }
+
+    _diff[0] = origin[0] - a[0]
+    _diff[1] = origin[1] - a[1]
+    _diff[2] = origin[2] - a[2]
+    crossVectors( _edge3, _diff, _edge2 ) 
+    const DdQxE2 = sign * dot( direction, _edge3)
+
+    // b1 < 0, no intersection
+    if ( DdQxE2 < 0 ) {
+        return null
+    }
+
+    crossVectors( _edge3, _edge1, _diff ) 
+    const DdE1xQ = sign * dot( direction, _edge3)
+
+    // b2 < 0, no intersection
+    if ( DdE1xQ < 0 ) {
+        return null
+    }
+
+    // b1+b2 > 1, no intersection
+    if ( DdQxE2 + DdE1xQ > DdN ) {
+        return null
+    }
+
+    // Line intersects triangle, check if ray does.
+    const QdN = - sign * dot( _diff,_normal$1 )
+
+    // t < 0, no intersection
+    if ( QdN < 0 ) {
+        return null
+    }
+
+    // Ray intersects triangle.
+    //return target.copy( direction ).multiplyScalar(QdN / DdN).add( origin )
+    let distance = QdN / DdN
+    _edge3[0] = origin.x + direction.x*distance
+    _edge3[1] = origin.y + direction.y*distance
+    _edge3[2] = origin.z + direction.z*distance
+    return _edge3
+}
+
 export const ray_vs_triangle = (a,b,c)=>{
     /*
         raycaster.ray.origin.x = o[0]
@@ -911,6 +998,11 @@ renderResize()
 
 prepare_light()
 
+const geometry = new BoxGeometry( 1, 1, 1 )
+const material = new MeshBasicMaterial( {color: 0x00ff00} )
+export const cube = new Mesh( geometry, material )
+scene.add( cube )
+
 export const make_screen_shoot = (width,height)=>{
 
     let ww = HEIGHT*0.60
@@ -934,20 +1026,13 @@ export const make_screen_shoot = (width,height)=>{
     return d.data
 } 
 
-export const call_manager_callback = ()=>{
-    if (callback_flag!==0){
-        manager_callback(callback_flag)
-        callback_flag = 0
-    }
-}
-
-export const prepare = (_render_before, _render_shadow, _render, _render_after, _manager_callback)=>{
+export const prepare = (_render_before, _render_shadow, _render, _render_after)=>{
     main_render_before = _render_before
     main_render        = _render
     main_render_shadow = _render_shadow
     main_render_after  = _render_after
-    manager_callback   = _manager_callback
-
+    
+    /*
     DefaultLoadingManager.onStart = ( url, itemsLoaded, itemsTotal )=>{
     	console.log( 'Started loading file: ' + url + '.\nLoaded ' + itemsLoaded + ' of ' + itemsTotal + ' files.' )
     }
@@ -963,6 +1048,7 @@ export const prepare = (_render_before, _render_shadow, _render, _render_after, 
     DefaultLoadingManager.onError = ( url )=>{
     	console.log( 'There was an error loading ' + url )
     }
+    */
 }
 
 export const classic_render = ()=>{
@@ -998,8 +1084,10 @@ export const classic_render = ()=>{
  */       
   
         main_render(delta)
-
         //_render_quad()
+
+        //update_matrix(scene)
+        //render_mesh(scene)
 
         renderer.abd_render_end()
 

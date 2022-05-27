@@ -4,16 +4,18 @@
   },
   "global": {
     "land": {
-      "tiles": [
-           0
-      ],
-      "tile_width": 9,
-      "size": 32,
-      "layer_width": 1024,
-      "layer_cx": 16,
-      "hm_cx": 16,
-      "hm_max": 512,
-      "minimap_cx": 128
+      "tiles": [0],
+      "chunks": 16,
+      "chunk_width": 9,
+      "view": 4,
+      "texture_size": 512,
+      "normalf": 0.36,
+      "layer_cx": 8,
+      "layer_t0_scale": 3,
+      "layer_t1_scale": 3,
+      "hm_cx": 8,
+      "hm_max": 8,
+      "minimap_cx": 4
     }
   },
   "user": {},

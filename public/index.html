@@ -309,8 +309,7 @@
             </div>
         </div>
 
-
-        <div id="LAND" component="dialog" class="dialog_window" style="left:0px; top:100px; width:280px; height:600px;">
+        <div id="LAND" component="dialog" class="dialog_window" style="left:0px; top:100px; width:320px; height:600px;">
             <div class="dialog">
                 <div>
                     <div id=".tab_btn1" class="tab">Paint</div>
@@ -321,7 +320,6 @@
                 </div>           
                 
                 <div>
-
                     <div id=".PAINT"> 
                         <div id=".conf">
                             size:<input id=".size" type="number" min=0.5 max=6 step=0.5 value=4>
@@ -346,8 +344,12 @@
 
                     <div id=".HM">
                         <div id=".conf">
+                            <div id=".info">
+
+                            </div>
                             size:<input id=".size" type="number" min=0.5 max=100 step=0.5 value=1.5>
-                            power:<input id=".power" type="number" min=0.001 max=1 step=0.05 value=0.01>
+                            power:<input id=".power" type="number" min=0.001 max=1 step=0.05 value=0.1>
+                            solid:<input id=".height" type="number" min=-1.0 max=1 step=0.01 value=0>
                             <div>
                                 <button id=".add">add</button>
                                 <button id=".sub">sub</button>
@@ -359,24 +361,63 @@
                         </div>
                         <div id=".masks">
                         </div>
+                        <div id=".tools">
+                            <div>
+                                gray:
+                                <label class="file_btn">
+                                    ...
+                                    <input id=".loadgray" type="file">
+                                </label>
+                            </div>
+                        </div>
                     </div>
 
 
                     <div id=".CONF">
-                        <div id=".layers">
-                            layers:
+                        <div id=".btns">
+                            <button id=".save">save</button>
+                        </div>
+                        <div id=".chunks">
+                            chunks:
+                            <div id=".info"></div>
                             <div>
+                                size:
+                                <div>
+                                    <input id=".chunkscount_range" class="range_input"  type="range"  min=1 max=512 step=1 value=4>
+                                    <input id=".chunkscount_input" class="number_input" type="number" min=1 max=512 step=1 value=4>
+                                </div>
+                                width:
+                                <div>
+                                    <input id=".chunkwidth_range" class="range_input"  type="range"  min=0.1 max=128 step=0.1 value=9>
+                                    <input id=".chunkwidth_input" class="number_input" type="number" min=0.1 max=128 step=0.1 value=9>
+                                </div>
+                                view size:
+                                <div>
+                                    <input id=".viewsize_range" class="range_input"  type="range"  min=1 max=512 step=1 value=4>
+                                    <input id=".viewsize_input" class="number_input" type="number" min=1 max=512 step=1 value=4>
+                                </div>
+                            </div>                            
+                        </div>
+
+                        <div id=".layers">
+                            paint:
+                            <div>
+                                grid cx:
+                                <div>
+                                    <input id=".gridcx_range" class="range_input"  type="range"  min=1 max=128 step=1 value="8">
+                                    <input id=".gridcx_input" class="number_input" type="number" min=1 max=128 step=1 value="8">
+                                </div>
                                 texture0 scale:
                                 <div>
                                     <input id=".texture0scale_range" class="range_input"  type="range"  min=0.1 max=64 step=0.1 value="8">
                                     <input id=".texture0scale_input" class="number_input" type="number" min=0.1 max=64 step=0.1 value="8">
                                 </div>
-                                texture scale:
+                                texture1 scale:
                                 <div>
-                                    <input id=".texturescale_range" class="range_input"  type="range"  min=0.1 max=64 step=0.1 value="8">
-                                    <input id=".texturescale_input" class="number_input" type="number" min=0.1 max=64 step=0.1 value="8">
+                                    <input id=".texture1scale_range" class="range_input"  type="range"  min=0.1 max=64 step=0.1 value="8">
+                                    <input id=".texture1scale_input" class="number_input" type="number" min=0.1 max=64 step=0.1 value="8">
                                 </div>
-                                size:
+                                texture size:
                                 <div>
                                     <select id=".size">
                                         <option value="64">64</option>
@@ -389,11 +430,6 @@
                                         <option value="8192">8192</option>
                                     </select>
                                 </div>
-                                width:
-                                <div>
-                                    <input id=".rwidth_range" class="range_input"  type="range"  min=0.1 max=128 step=0.1 value="9">
-                                    <input id=".rwidth_input" class="number_input" type="number" min=0.1 max=128 step=0.1 value="9">
-                                </div>
                                 normal:
                                 <div>
                                     <input id=".normalf_range" class="range_input"  type="range"  min=0.01 max=2 step=0.01 value="0.04">
@@ -403,6 +439,7 @@
                             </div>
     
                         </div>
+
                         <div id=".hm">
                             heightmap:
                             <div>
@@ -419,6 +456,10 @@
                                 <button id=".restore">restore</button>
                             </div>
     
+                        </div>
+
+                        <div id=".tools">
+                            <button id=".paint_clear_all">paint clear all</button>
                         </div>
 
                     </div>

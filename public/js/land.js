@@ -1,106 +1,45 @@
-import * as RENDER    from './render.js'
-import * as CHUNK     from './chunk.js'
-import * as UTILS     from './utils.js'
-import * as ASSETS    from './assets.js'
-import * as INFO      from './info.mjs'
-import * as HEIGHTMAP from './heightmap.js'
+/*
+    
+    copyright 2019-2022 Hamzin Abdulla (abdulla_best@mail.ru)
+*/
+import * as UTILS      from './utils.js'
+import * as RENDER     from './render.js'
+import * as CHUNKS     from './chunks.js'
+import * as VIEWPORT   from './viewport.js'
+import * as ASSETS     from './assets.js'
+import * as INFO       from './info.mjs'
+import * as HEIGHTMAP  from './heightmap.js'
+import * as PAINTLAYER from './paintlayer.js' 
 import {
-    Scene,
     WebGLRenderTarget,
-    NearestFilter,
     RGBAFormat,
-    RGBFormat,
-    OrthographicCamera,
-    Color,
     ShaderMaterial,
     MeshLambertMaterial,
     DoubleSide,
     Mesh,
     LinearFilter,
     LinearMipmapLinearFilter,
-    LinearMipmapNearestFilter,
-    NearestMipmapNearestFilter,
-    RepeatWrapping,
     ReplaceStencilOp,
-    LessStencilFunc,
     EqualStencilFunc,
     Vector3,
     Vector4,
-
-    AdditiveBlending,
-    SubtractiveBlending,
-
-
 } from '/lib/three.js'
-import { Vector2 } from '../lib/three.js'
 
-const _path                     = '/l/'
+let ground_mesh             = null
+let ground_material         = null
 
-export const tiles              = new Array(64).fill(null)    // тайловые текстуры
+let map_width               = 1                 // размер карты
+export let half_map_width   = 0.5               // 
+let chunk_width             = 1                 // ширина и высота чанка
+let texture_size            = 64                // размер текстуры на чанк
+let normal_factor           = 0.04              // сила изменения направления нормали для освещения
+let heightmap_cx            = 1                 // сетка чанка карты высот
 
-let main_layer_width            = 1024             // размер текстуры на блок
-let ground_material  = null
+
 let minimap_material = null
-
 
 export let minimap_mesh         = null
 let minimap_grid_cx             = 128
-
-let layer_grid                  = null              // данные по покраске карты (3 значения - mask, texture, size )
-let layer_list                  = null              // 
-let layer_grid_cx               = 16                // количество точек в одном чанке
-let layer0_texture_scale        = 8                 // размер текстуры заливки
-let layer_texture_scale         = 8                 // размер текстуры в сетке
-let layer_normal_factor         = 0.04              // сила изменения направления нормали для освещения
-
-let ground_mesh                 = null
-
-
-// -------------------------------------
-// SHADER
-// -------------------------------------
-
-const sprite_mesh = new Mesh(UTILS.pass_geometry, new ShaderMaterial({
-    uniforms: {
-        mask : { value: null },
-        map  : { value: null },
-        scale: { value: 1.0  },
-        gsize: { value: 1.0  },
-        rx   : { value: 1.0  },
-        ry   : { value: 1.0  },
-        ox   : { value: 1.0  },
-        oy   : { value: 1.0  },
-    },
-    vertexShader: [
-        'varying vec2 lUv;',
-        'varying vec2 lUv2;',
-        'uniform float scale;',
-        'uniform float gsize;',
-        'uniform float rx;',
-        'uniform float ry;',
-        'uniform float ox;',
-        'uniform float oy;',
-        'void main() {',
-            'lUv = uv;',
-            'gl_Position = vec4( rx+position.x*scale,ry+position.y*scale, 0.0, 1.0 );',
-            'lUv2 = vec2(ox + gl_Position.x*gsize,oy + gl_Position.y*gsize);',
-        '}'].join(''),
-    fragmentShader: [
-        'uniform sampler2D mask;',
-        'uniform sampler2D map;',
-        'varying vec2 lUv;',
-        'varying vec2 lUv2;',
-        'void main(){',
-            'gl_FragColor = vec4( texture2D(map, lUv2).rgb, texture2D(mask, lUv).a);',
-        '}'].join(''),
-    side        : DoubleSide,
-    depthTest   : false,
-    depthWrite  : false,
-    transparent : true,
-}))
-
-export const getGrid = ()=>layer_grid
-export const getWidth = ()=>layer_grid_cx*CHUNK.count_x
 
 const prepare_ground_material = ()=>{
 
@@ -286,117 +225,51 @@ const prepare_minimap_material = ()=>{
     })
 }
 
-export const prepare_tiles = (list)=>{
-    for (let i=0;i<list.length;i++){
-        tiles[i] = ASSETS.get_texture(list[i], INFO.MCFLAG_LAND )
-    }
+export const loaded_paint_tiles = ()=> refresh_paintlayer() 
+export const loaded_paint_layer = ()=> { PAINTLAYER.loaded(); refresh_paintlayer() }
+export const loaded_heightmap   = ()=> HEIGHTMAP.loaded() 
 
-    if (RENDER.check_callback_flag(INFO.MCFLAG_LAND)===0){
-        refresh_layers()
-    }
+export const setPaintParams = (grid_cx, t0scale, t1scale, textureSize)=>{
+    // запускаем обновление отрисовки
+    refresh_paintlayer()
 
-}
+    PAINTLAYER.setTextureScale(t0scale, t1scale)
 
-export const setConf = (t0_scale,t_scale,size)=>{
-    layer0_texture_scale = t0_scale
-    layer_texture_scale = t_scale
-    if (main_layer_width!==size){
-        free()
-        main_layer_width = size
+    if (texture_size!==textureSize){
+        
+        VIEWPORT.free()
+        texture_size = textureSize
         prepare_viewport()
     }
-        
-    refresh_layers()
+
+    PAINTLAYER.resize(grid_cx)
+
 }
 
-export const setNormalF = (normalf)=>{
-    layer_normal_factor = normalf
-}
+export const setNormalF = (normalf)=>normal_factor = normalf
 
-export const updateGroundMeshGeometry = ()=>{
+const updateGroundMeshGeometry = ()=>{
 
-    const geometry = UTILS.generate_grid(
-        CHUNK.r_width, 
-        CHUNK.r_width, 
-        HEIGHTMAP.get_grid_cx(),
-        HEIGHTMAP.get_grid_cx(),
+    if (ground_mesh!==null){
+        ground_mesh.geometry.dispose()
+    }
+
+    ground_mesh = new Mesh(UTILS.generate_grid(
+        chunk_width, 
+        chunk_width, 
+        heightmap_cx,
+        heightmap_cx,
         0,
         0
-    )
-
-    if (ground_mesh!==null ){
-        if (ground_mesh.geometry!==null){
-            ground_mesh.geometry.dispose()
-        }
-        ground_mesh.geometry = geometry
-    }
-
-    return geometry
-
-}
-
-const prepare_map = ( _main_layer_width, _layer_grid_cx, _minimap_cx)=>{
-
-    main_layer_width = _main_layer_width
-    layer_grid_cx    = _layer_grid_cx
-    minimap_grid_cx  = _minimap_cx
-
-    prepare_ground_material()
-    prepare_minimap_material()
-    
-    // заливаем слои
-    layer_grid = new Uint8Array( CHUNK.count_x * CHUNK.count_y * (layer_grid_cx * layer_grid_cx * 3))
-    layer_grid.fill(0)
-
-    layer_list = new Array(CHUNK.count_x * CHUNK.count_y)
-    for (let i=0;i<layer_list.length;i++){
-        layer_list[i] = new Uint32Array( (layer_grid_cx+2) * (layer_grid_cx+2)  )
-    }
-    // 
-
-    // подготавливаем проекции
-    //projection_grid = new Uint8Array( CHUNK.count_x * CHUNK.count_y * (projection_cx * projection_cy *3*2))
-    //projection_grid.fill(0)
-    //
-
-    let geometry = updateGroundMeshGeometry()
-
-    ground_mesh = new Mesh(geometry,ground_material)
-    ground_mesh.castShadow = false
+    ), ground_material)
+    ground_mesh.castShadow    = false
     ground_mesh.receiveShadow = false //true
-
-    //
-    if (minimap_mesh!==null){
-        minimap_mesh.geometry.dispose()
-    }
-    geometry = UTILS.generate_grid(
-        CHUNK.max_width, 
-        CHUNK.max_width, 
-        minimap_grid_cx, 
-        minimap_grid_cx,
-        -CHUNK.half_max_width,
-        -CHUNK.half_max_width
-    )
-
-    minimap_mesh = new Mesh(geometry, minimap_material)
-    minimap_mesh.castShadow = false
-    minimap_mesh.receiveShadow = false
-    //
 }
 
-export const free = ()=>{
-    for (let i = 0; i < CHUNK.viewport.length; i++) {
-        let a = CHUNK.viewport[i]
-        if (a.ground!==null){
-            a.ground.dispose()
-        }
-    }
-}
-
-const prepare_viewport = ()=>{
-    for (let i = 0; i < CHUNK.viewport.length; i++) {
+export const prepare_viewport = ()=>{
+    for (let i = 0; i < VIEWPORT.viewport.length; i++) {
         const t = new WebGLRenderTarget(
-            main_layer_width, main_layer_width,
+            texture_size, texture_size,
             {
                 minFilter     : LinearMipmapLinearFilter, //NearestMipmapNearestFilter,//LinearMipmapLinearFilter, //LinearMipmapNearestFilter 
                 magFilter     : LinearFilter, //NearestMipmapNearestFilter,//LinearFilter, //NearestFilter, //LinearFilter
@@ -409,39 +282,166 @@ const prepare_viewport = ()=>{
         t.texture.generateMipmaps = true
         t.texture.anisotropy = 4
         
-        const v = CHUNK.viewport[i]
-        if (v.ground!==null){
-            v.ground.dispose()
-        }
+        const v = VIEWPORT.viewport[i]
         v.ground = t
-        // добавляем меш травы
-        //if (v.grass_mesh!==null){
-        //    v.grass_mesh.geometry.dispose()
-        //}
-        //v.grass_mesh = new Mesh(
-        //    GEN.gen_grass_buffer(layer_grid_cx,layer_grid_cx,grass_count),
-        //    ASSET.grass_shader
-        //)
     }
 }
 
+export const getMapWidth       = ()=>map_width
 
-export const create_map = (_heightmap_grid_cx, _heightmap_max, _main_layer_width, _layer_grid_cx, _minimap_cx)=>{
-    //
-    HEIGHTMAP.prepare(_heightmap_grid_cx, _heightmap_max)
-    //
-    prepare_map(_main_layer_width, _layer_grid_cx, _minimap_cx)
-    //
+export const getViewGPUUsage    = ()=>VIEWPORT.viewport.length*(texture_size*texture_size*4)
+export const preparePaintTiles  = (tiles)=>PAINTLAYER.prepare_tiles(tiles)
+export const getPaintGrid       = ()=> PAINTLAYER.getGrid()
+export const getPaintWidth      = ()=> PAINTLAYER.getWidth()
+export const setHeightmapHeight = (height)=>HEIGHTMAP.setMaxHeight(height)
+export const getHeightmapGrid   = ()=> HEIGHTMAP.getGrid()
+export const getHeightmapWidth  = ()=> HEIGHTMAP.getWidth()
+export const heightmapLoadGray  = (t)=> HEIGHTMAP.loadGray(t)
+export const heightmapLoad      = (id)=> HEIGHTMAP.load(id)
+export const paintLoad          = (id)=> PAINTLAYER.load(id)
+export const paintClearAll      = ()=> { PAINTLAYER.clearAll(); refresh_paintlayer() }
+
+export const resize = (chunks,view,width)=>{
+    VIEWPORT.free()
+
+    chunk_width    = width
+    map_width      = chunks*width
+    half_map_width = map_width*0.5
+
+    // создаем чанки
+    CHUNKS.create(chunks)
+    
+    // создаем view
+    VIEWPORT.create(view)
     prepare_viewport()
+
+    // создаем слой покраски
+
+    PAINTLAYER.resize(PAINTLAYER.get_cx())
+
+    // создаем карту высот
+    HEIGHTMAP.resize(chunks*heightmap_cx)
+
+    // создаем геометрию
+    updateGroundMeshGeometry()
+    
+    // запускаем обновление отрисовки
+    refresh_paintlayer()
 }
 
-export const render_block = (x,y,ground)=>{
+export const setHeightmapCx = (cx)=>{
+    heightmap_cx = cx
+
+    // создаем карту высот
+    HEIGHTMAP.resize(CHUNKS.count_x*heightmap_cx)
+
+    // создаем геометрию
+    updateGroundMeshGeometry()
+}
+// красим слой 
+export const setPaint = ( x, y, mask, tile, size )=>{
+    
+    const _x = x + half_map_width
+    const _y = y + half_map_width
+
+    // находим координаты в слое
+    const w  = PAINTLAYER.getWidth()/map_width
+    const lx = Math.round(_x*w)
+    const ly = Math.round(_y*w)
+    
+    // находим координаты в чанке
+    const cx = Math.trunc(_x/chunk_width)
+    const cy = Math.trunc(_y/chunk_width)
+
+    PAINTLAYER.set_point(lx, ly, cx, cy, mask, tile, size)
+}
+
+// редактируем карту высот
+export const setHeightmap = ( x, y, mode, mask, size, power)=>{
+    // переводим в пространство карты высот
+    const _x = x/half_map_width
+    const _y = y/half_map_width
+
+    HEIGHTMAP.set_heightmap(_x,_y,mode,mask,size,power)
+}
+//--------------------------------------------------
+//проверяет нужно ли обновить данные по карте высот, после редактирования
+export const check_heightmap_data = ()=>{ if ( HEIGHTMAP.needs_update_data ) HEIGHTMAP.update_heightmap_data() }
+
+// выставляем положение маски на карте
+export const set_mask_position = (mode,position,size)=>{
+    if (!ground_mesh.material.uniforms){
+        return 
+    }
+
+    ground_mesh.material.uniforms.mx.value = position.x + half_map_width
+    ground_mesh.material.uniforms.my.value = position.z + half_map_width
+
+    let _size = 0
+    switch(mode){
+        case 0: _size = (chunk_width/PAINTLAYER.get_cx())*0.5
+                break;
+        case 1: _size = (chunk_width/heightmap_cx)*0.5
+                break;
+    }
+
+    ground_mesh.material.uniforms.size.value = _size*size
+}
+
+// определяем положение указателя на карте высот
+export const over_heightmap = (ray,result)=>{
+    result.x = ray.origin.x
+    result.y = ray.origin.y
+    result.z = ray.origin.z
+
+    // если луч смотрит вверх то смысла проверять нет
+    if (ray.direction.y>=0){
+        return
+    }
+
+    // переводим положени луча в пространство карты высот
+    const scale = HEIGHTMAP.getWidth()/map_width
+
+    let rx = (ray.origin.x + half_map_width)*scale
+    let ry = ray.origin.y
+    let rz = (ray.origin.z + half_map_width)*scale
+    let dx = ray.direction.x*scale
+    let dy = ray.direction.y
+    let dz = ray.direction.z*scale
+
+    // находим пересечение, если distance=0 то пересечения нет
+    const distance = HEIGHTMAP.ray_vs_heightmap(rx,ry,rz,dx,dy,dz)
+
+    // расчитываем положение точки
+    result.x = result.x + ray.direction.x*distance
+    result.y = result.y + ray.direction.y*distance
+    result.z = result.z + ray.direction.z*distance
+}
+
+// ставим флаг на обновление всех видимых слоев
+export const refresh_paintlayer = ()=>{
+    const l = VIEWPORT.viewport_free_n
+    for (let i = 0; i < l; i++) {
+        const n = VIEWPORT.viewport_free[i]
+        const t = VIEWPORT.viewport[n]
+        t.ground_ready = false
+    } 
+}
+
+// обновляем центр видимых чанков
+export const update_view = (x,y)=>{
+    const cx = Math.trunc( (x + half_map_width) / chunk_width)
+    const cy = Math.trunc( (y + half_map_width) / chunk_width)
+    VIEWPORT.update(cx,cy)
+}
+
+const render_block = (x,y,ground)=>{
     const m = ground_mesh
-    const rx = x*CHUNK.r_width 
-    const ry = y*CHUNK.r_width
-    m.position.x = rx - CHUNK.half_max_width
+    const rx = x*chunk_width 
+    const ry = y*chunk_width
+    m.position.x = rx - half_map_width
     m.position.y = 0
-    m.position.z = ry - CHUNK.half_max_width
+    m.position.z = ry - half_map_width
 
     m.updateMatrix()
     m.matrixWorld.multiplyMatrices( RENDER.scene.matrixWorld, m.matrix )
@@ -449,363 +449,87 @@ export const render_block = (x,y,ground)=>{
     m.material.map = ground.texture
 
     RENDER.setProgram(m)
-    RENDER._setValue('hmap', HEIGHTMAP.getTexture())
-    RENDER._setValue('map', ground.texture)
-    RENDER._setValue('ox', rx)
-    RENDER._setValue('oy', ry)
-    RENDER._setValue('mask', ASSETS.getMask(2))
-    RENDER._setValue('mx', ground_mesh.material.uniforms.mx.value)
-    RENDER._setValue('my', ground_mesh.material.uniforms.my.value)
-    RENDER._setValue('size', ground_mesh.material.uniforms.size.value)
-    RENDER._setValue('normalf',layer_normal_factor)
-    RENDER._setValue('hstep',HEIGHTMAP.getStep())
-    RENDER._setValue('maxw',CHUNK.max_width)
+    RENDER._setValue('hmap',    HEIGHTMAP.getTexture() )
+    RENDER._setValue('map',     ground.texture )
+    RENDER._setValue('ox',      rx )
+    RENDER._setValue('oy',      ry )
+    RENDER._setValue('mask',    ASSETS.getMask(2) )
+    RENDER._setValue('mx',      ground_mesh.material.uniforms.mx.value )
+    RENDER._setValue('my',      ground_mesh.material.uniforms.my.value )
+    RENDER._setValue('size',    ground_mesh.material.uniforms.size.value )
+    RENDER._setValue('normalf', normal_factor )
+    RENDER._setValue('hstep',   HEIGHTMAP.getStep() )
+    RENDER._setValue('maxw',    map_width )
     RENDER._renderObject(m)
 }
-//--------------------------------------------------
-// подготавливает список для отрисовки и сортирует по слоям
-const make_layer_list = (cx,cy)=>{
-    let rx = cx*layer_grid_cx
-    let ry = cy*layer_grid_cx
-    let sx = rx - 2
-    let sy = ry - 2
-    let ex = rx + layer_grid_cx + 2
-    let ey = ry + layer_grid_cx + 2
 
-    sx = Math.max( sx,0 )
-    sy = Math.max( sy,0 )
-    ex = Math.min( ex, CHUNK.count_x*layer_grid_cx )
-    ey = Math.min( ey, CHUNK.count_y*layer_grid_cx )
-
-    const row_size = (CHUNK.count_x*layer_grid_cx)*3
-    const list = layer_list[cy*CHUNK.count_x+cx]
-    let pp = 0
-
-    for (let y=sy;y<ey;y++){
-        let p = y*row_size + sx*3
-        for (let x=sx;x<ex;x++){
-            const m = layer_grid[p+0]
-            if (m!==0){
-                list[pp] = p
-                pp = pp + 1
-            }
-            p = p + 3
+// рисуем землю чанков
+export const render = ()=>{
+    const l = VIEWPORT.viewport_free_n
+    for (let i = 0; i < l; i++) {
+        const t = VIEWPORT.viewport[VIEWPORT.viewport_free[i]]
+        if (!t.ground_ready){
+            continue
         }
-    }
-    if (pp<list.length){
-        list[pp] = 0
-    }
-
-    list.sort((a, b) => { 
-        if (a===0 || b===0){
-            return -1
-        }
-        const m1 = layer_grid[a+2]
-        const m2 = layer_grid[b+2]
-        return m2-m1
-    })
+        render_block(t.x,t.y,t.ground)
+    } 
 }
 
-// отрисовывает чанк
-const _layer_paint_no_sort = (cx, cy, target) => {
-    RENDER._renderStart(target)
-
-    // заливаем основой
-    RENDER._setProgram( sprite_mesh )
-
-    let gsize = layer0_texture_scale*0.5
-
-    let scale = 1.0
-    let rx = 0.0
-    let ry = 0.0
-
-    RENDER._setValue('ox',  cx*layer0_texture_scale)
-    RENDER._setValue('oy', -cy*layer0_texture_scale)
-    RENDER._setValue('gsize', gsize)
-
-    RENDER._setValue('mask',  ASSETS.getMask(1))
-    RENDER._setValue('map',   tiles[0])
-    RENDER._setValue('scale', scale)
-    RENDER._setValue('rx', rx)
-    RENDER._setValue('ry', ry)
-
-    RENDER._renderObject( sprite_mesh)
-
-    // -----
-    gsize = layer_texture_scale*0.5
-    rx = cx*layer_grid_cx
-    ry = cy*layer_grid_cx
-    let sx = rx - 2
-    let sy = ry - 2
-    let ex = rx + layer_grid_cx + 2
-    let ey = ry + layer_grid_cx + 2
-    if (sx<0){ sx = 0 }
-    if (sy<0){ sy = 0 }
-    if (ex>=CHUNK.count_x*layer_grid_cx){ ex=CHUNK.count_x*layer_grid_cx }
-    if (ey>=CHUNK.count_y*layer_grid_cx){ ey=CHUNK.count_y*layer_grid_cx }
-
-    const row_size   = (CHUNK.count_x*layer_grid_cx)*3
-    const grid_step  = 2/layer_grid_cx
-    const scale_step = (grid_step*0.5)*6.0
-
-    let oy = -1 + (-2*grid_step)
-    for (let y=sy;y<ey;y++){
-        let p = y*row_size + sx*3
-        let ox = -1 + (-2*grid_step)
-        for (let x=sx;x<ex;x++){
-            const m = layer_grid[p+0]
-            if (m!==0){
-                const t = layer_grid[p+1]
-                const s = scale_step*(layer_grid[p+2]/255)
-                
-                RENDER._setProgram( sprite_mesh )
-                RENDER._setValue('ox',  cx*layer_texture_scale)
-                RENDER._setValue('oy', -cy*layer_texture_scale)
-                RENDER._setValue('gsize', gsize)
-
-                RENDER._setValue('mask',  ASSETS.getMask(m))
-                RENDER._setValue('map', tiles[t])
-                RENDER._setValue('scale', s)
-                RENDER._setValue('rx', ox)
-                RENDER._setValue('ry', oy)
-            
-                RENDER._renderObject( sprite_mesh)
-            }
-            p = p + 3
-            ox = ox + grid_step
+// подготавливаем
+export const render_after = ()=>{
+    const l = VIEWPORT.viewport_free_n
+    for (let i = 0; i < l; i++) {
+        let t = VIEWPORT.viewport[VIEWPORT.viewport_free[i]]
+        if (!t.ground_ready){
+            PAINTLAYER.paint(t.x,t.y,t.ground)
+            t.ground_ready = true
+            break;
         }
-        oy = oy + grid_step
     }
-
-    RENDER._renderEnd()
 }
 
-const _layer_paint = (cx, cy, target) => {
-    RENDER._renderStart(target)
+export const load = (id,params)=>{
 
-    // заливаем основой
-    RENDER._setProgram( sprite_mesh )
+    create(params)
 
-    let gsize = layer0_texture_scale*0.5
+    PAINTLAYER.prepare_tiles(params.tiles)
 
-    RENDER._setValue('ox',  cx*layer0_texture_scale)
-    RENDER._setValue('oy', -cy*layer0_texture_scale)
-    RENDER._setValue('gsize', gsize)
+    PAINTLAYER.load(id)
 
-    RENDER._setValue('mask',  ASSETS.getMask(1))
-    RENDER._setValue('map',   tiles[0])
-    RENDER._setValue('scale', 1.0)
-    RENDER._setValue('rx', 0)
-    RENDER._setValue('ry', 0)
+    HEIGHTMAP.load(id)
+}
 
-    RENDER._renderObject( sprite_mesh)
-
-    // -----
-    gsize = layer_texture_scale*0.5
-    const row_size   = (CHUNK.count_x*layer_grid_cx)*3
-    const grid_step  = 2/layer_grid_cx
-    const scale_step = (grid_step*0.5)*6.0
-
-    const list = layer_list[cy*CHUNK.count_x+cx]
-
-    let _ox = cx * layer_grid_cx
-    let _oy = cy * layer_grid_cx
-
-    for (let i=0;i<list.length;i++){
-        let p = list[i]
-        if (p===0){
-            break
-        }
-
-        let y = Math.trunc(p/row_size)
-        let x = Math.trunc((p - y*row_size)/3)
-
-        let ox = -1 + (x - _ox)*grid_step
-        let oy = -1 + (y - _oy)*grid_step
-
-        const m = layer_grid[p+0]
-        const t = layer_grid[p+1]
-        const s = scale_step*(layer_grid[p+2]/255)
-
-        RENDER._setProgram( sprite_mesh )
-        RENDER._setValue('ox',  cx*layer_texture_scale)
-        RENDER._setValue('oy', -cy*layer_texture_scale)
-        RENDER._setValue('gsize', gsize)
-
-        RENDER._setValue('mask',  ASSETS.getMask(m))
-        RENDER._setValue('map', tiles[t])
-        RENDER._setValue('scale', s)
-        RENDER._setValue('rx', ox)
-        RENDER._setValue('ry', oy)
+export const create = (params)=>{
     
-        RENDER._renderObject( sprite_mesh)
+    chunk_width    = params.chunk_width
+    texture_size   = params.texture_size
+    map_width      = params.chunks*chunk_width
+    half_map_width = map_width*0.5
+    heightmap_cx   = params.hm_cx
+    normal_factor  = params.normalf
 
-    }
-
-    RENDER._renderEnd()
-}
-
-// перерисовывает слой и вокруг 
-export const repaint_layer = (cx,cy)=>{
-    for (let y = cy - 1; y <= cy + 1; y++) {
-        for (let x = cx - 1; x <= cx + 1; x++) {
-            if (x >= 0 && y >= 0 && x < CHUNK.count_x && y < CHUNK.count_y) {
-                let g = CHUNK.get(x,y)
-                if (g.viewport !== null) {
-                    _layer_paint(x, y, g.viewport.ground)
-                    //g.viewport.grass_ready = false
-                }
-            }
-        }
-    }
-}
-
-//  
-export const refresh_layers = ()=>{
-    for (let i = 0; i < CHUNK.viewport_free_n; i++) {
-        let t = CHUNK.viewport[CHUNK.viewport_free[i]]
-        t.ground_ready = false
-    }
-}
-
-export const layer_render = (x,y,ground)=>{
-    _layer_paint(x, y, ground)
-    return true
-}
-
-// устанавливает новую покраску на слое
-export const _set_point = (rx, ry, mask, txt, size) => {
-    let lx = Math.round((rx*layer_grid_cx)/CHUNK.r_width)
-    let ly = Math.round((ry*layer_grid_cx)/CHUNK.r_width)
-    const mx = CHUNK.count_x*layer_grid_cx
-    const my = CHUNK.count_y*layer_grid_cx
-    if ( mask===0 ){
-        let w = 0
-        if (size==1){
-            w=0
-        }
-        if (size==2){
-            w=1
-        }
-        if (size==3){
-            w=2
-        }
-        if (size>=4){
-            w=3
-        }
-        for (let y = ly-w; y<=ly+w; y++) {
-            for (let x = lx-w; x<=lx+w; x++) {
-                if (x>=0 && y>=0 && x<mx && y<my) {
-                    let p = (y*mx + x)*3
-                    layer_grid[p + 0] = 0
-                    layer_grid[p + 1] = 0
-                    layer_grid[p + 2] = 0
-                }
-            }
-        }
-    }else{
-        if (lx>=0 && ly>=0 && lx<mx && ly<my) {
-            let p = (ly*mx + lx)*3
-            layer_grid[p + 0] = mask
-            layer_grid[p + 1] = txt
-            layer_grid[p + 2] = Math.round(size * 255 / 6)
-        }
-    }
-}
-
-// устанавливает новую покраску и перерисовывает чанк
-export const set_point = (rx, ry, mask, txt, size) => {
+    // создаем чанки
+    CHUNKS.create(params.chunks)
     
-    _set_point(rx, ry, mask, txt, size)
-    
-    const cx = Math.trunc(rx/CHUNK.r_width)
-    const cy = Math.trunc(ry/CHUNK.r_width)
+    // создаем view
+    VIEWPORT.create(params.view)
+    prepare_viewport()
 
-    for (let y = cy - 1; y <= cy + 1; y++) {
-        for (let x = cx - 1; x <= cx + 1; x++) {
-            if (x >= 0 && y >= 0 && x < CHUNK.count_x && y < CHUNK.count_y) {
-                let g = CHUNK.get(x,y)
-                if (g.viewport !== null) {
-                    make_layer_list(x,y)
-                    _layer_paint(x, y, g.viewport.ground)
-                }
-            }
-        }
-    }
+    // создаем слой покраски
+    PAINTLAYER.create(params.layer_cx)
+    PAINTLAYER.setTextureScale( params.layer_t0_scale, params.layer_t1_scale )
+
+    // создаем карту высот
+    HEIGHTMAP.prepare( params.chunks*heightmap_cx, params.hm_max )
+
+    // создаем геометрию
+    updateGroundMeshGeometry()
 }
 
-//--------------------------------------------------
-export const set_mask_position = (x,y,size)=>{
-    if (ground_mesh.material.uniforms){
-        ground_mesh.material.uniforms.mx.value = x
-        ground_mesh.material.uniforms.my.value = y
-        ground_mesh.material.uniforms.size.value = (CHUNK.r_width/(2*layer_grid_cx))*size
-    }
-}
 
-//--------------------------------------------------
-// переносим загруженные слои на наши слои
-const update_layer = (e)=>{
-    let layer_image = e.target
-    let canvas = document.createElement('canvas')
-    canvas.width = layer_image.width
-    canvas.height = layer_image.height
-    const ctx = canvas.getContext('2d')
-    ctx.drawImage(layer_image, 0, 0)
-    let d = ctx.getImageData(0, 0, layer_image.width, layer_image.height)
-    let ii = 0
-    for (let i=0;i<d.data.length;i=i+4){
-        layer_grid[ii+0] = d.data[i+0]
-        layer_grid[ii+1] = d.data[i+1]
-        layer_grid[ii+2] = d.data[i+2]
-        ii=ii+3
-    }
-    d = null
-    layer_image = null
-    canvas = null
+prepare_ground_material()
 
-    for (let y=0; y<CHUNK.count_y; y++) {
-        for (let x=0; x<CHUNK.count_x; x++) {
-            make_layer_list(x,y)
-         }
-    }
+updateGroundMeshGeometry()
 
-    refresh_layers()
-}
 
-export const load = (map_id)=>{
-    // загружаем раскраску - слои
-    const layer_image = new Image()
-    layer_image.onload = (e)=>{
-        update_layer(e)
-        //count = count - 1
-        //if (count===0){
-        //    resolve()
-        //}
-    }
-    layer_image.src = _path+'layer_'+map_id+'.png?'+Date.now()
 
-    //create_map()
-/*
-    return new Promise((resolve,reject)=>{
-        //
-        let count = 3
-
-        const loader = new TextureLoader()
-        loader.setPath(_path)
-        
-        // загружаем миникарту
-        loader.load('map_'+map_id+'.png?'+Date.now(), (texture)=>{
-            minimap_mesh.material.uniforms.map.value = texture
-            count = count - 1
-            if (count===0){
-                resolve()
-            }
-        })
-    })
-*/
-}
-
-export const prepare = ()=>{
-
-}

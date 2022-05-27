@@ -1,4 +1,7 @@
-
+/*
+    
+    copyright 2019-2022 Hamzin Abdulla (abdulla_best@mail.ru)
+*/
 import * as child_process from 'child_process'
 import * as fs from 'fs'
 import * as path from 'path'
@@ -340,6 +343,12 @@ export const get_game = (user,game_id)=>{
 export const save_paint_list = (game_id,data)=>{
     const game = games[game_id]
     game.global.land.tiles = data
+    fs.writeFileSync('games/'+game_id+'.json',JSON.stringify(game,undefined,2))
+}
+
+export const save_land_param = (game_id,data)=>{
+    const game = games[game_id]
+    game.global.land = data
     fs.writeFileSync('games/'+game_id+'.json',JSON.stringify(game,undefined,2))
 }
 

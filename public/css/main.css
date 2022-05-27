@@ -85,6 +85,18 @@ input[type='range']::-webkit-slider-thumb {
     width: 10px;
 }
 
+.file_btn{
+    width: 30px;
+    display: inline-grid;
+    border: 1px solid #b5b5b5;
+    border-radius: 5px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.file_btn>input{
+    display: none;
+}
 
 #CANVAS{
     z-index: 0;
@@ -181,15 +193,6 @@ input[type='range']::-webkit-slider-thumb {
     float: right;
 }
 
-.file_btn{
-    width: 30px;
-    display: inline-grid;
-    border: 1px solid #b5b5b5;
-    border-radius: 5px;
-    text-align: center;
-    cursor: pointer;
-}
-
 #ASSETS\.TEXTURES {
     display: flex;
     height: 100%;
@@ -278,10 +281,6 @@ input[type='range']::-webkit-slider-thumb {
     height: 24px;
 }
 
-#MODEL_EDIT\.file{
-    display: none;
-}
-
 #MODEL_EDIT\.n{
     width: 20px;
 }
@@ -342,9 +341,10 @@ input[type='range']::-webkit-slider-thumb {
 /*
     LAND
 */
-#LAND\.PAINT, #LAND\.HM {
+#LAND\.PAINT, #LAND\.HM, #LAND\.CONF {
     flex-direction: column;
     height: 100%;
+    overflow: hidden;
 }
 
 #LAND\.PAINT\.masks img, #LAND\.HM\.masks img{
@@ -383,13 +383,46 @@ input[type='range']::-webkit-slider-thumb {
     border: 1px solid rgb(0 0 0);
 }
 
-#LAND\.CONF{
-    flex-direction: column;
-    height: 100%;
+#LAND\.HM\.tools {
+    border-top: 1px solid gray;
+    padding: 8px 0 0 0;
+} 
+#LAND\.HM\.conf\.info {
+    color: #e5e5e5
+} 
+#LAND\.HM\.conf\.size{
+    width: 55px;
+}
+#LAND\.HM\.conf\.height, #LAND\.HM\.conf\.power{
+    width: 55px;
+}
+
+#LAND\.CONF\.btns{
+    margin: 10px 0 0 10px;
+}
+
+
+#LAND\.CONF\.chunks{
+    margin: 10px 0 0 0;
+    border-top: 1px solid gray;
+    color: white;
+}
+
+#LAND\.CONF\.chunks\.info{
+    color: rgb(196, 196, 196);
+}
+
+#LAND\.CONF\.chunks\.info span{
+    color: white;
+}
+
+#LAND\.CONF\.chunks div{
+    margin: 0 0 0 10px;
 }
 
 #LAND\.CONF\.layers{
     margin: 10px 0 0 0;
+    border-top: 1px solid gray;
     color: rgb(196, 196, 196);
 }
 
@@ -407,4 +440,11 @@ input[type='range']::-webkit-slider-thumb {
 #LAND\.CONF\.hm div{
     margin: 0 0 0 10px;
     color: white;
+}
+
+#LAND\.CONF\.tools{
+    margin: 10px 0 0 0;
+    padding: 10px 0 0 10px;
+    border-top: 1px solid gray;
+    color: rgb(196, 196, 196);
 }

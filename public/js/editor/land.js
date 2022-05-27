@@ -1,10 +1,14 @@
-import * as CHUNK     from '/js/chunk.js'
+/*
+    
+    copyright 2019-2022 Hamzin Abdulla (abdulla_best@mail.ru)
+*/
 import * as LAND      from '/js/land.js'
 import * as INFO      from '/js/info.mjs'
 import * as NET       from '/js/net.js'
 import * as ASSETS    from '/js/assets.js'
 import * as HEIGHTMAP from '/js/heightmap.js' 
 import * as CAMERA    from '/js/camera_orbit.js'
+import * as UTILS     from '/js/utils.js'
 import { sel_dialog } from '/js/editor/textures.js'
 
 let mask_selected_tag    = null
@@ -24,9 +28,46 @@ const save_tiles_list = ()=>{
     ])
 }
 
-export const prepare_game = (_tiles)=>{
-    tiles = _tiles
+const update_land_info = ()=>{
+    const w = $.LAND.CONF
+
+    let s = 'width: <span>' + LAND.getMapWidth() +'</span>, '
+    s = s + 'paint: <span>' + LAND.getPaintWidth() + 'px</span>, '
+    s = s + 'hm: <span>' + LAND.getHeightmapWidth() + 'px</span>, '
+    let m = LAND.getViewGPUUsage()
+    s = s + 'view: <span>' + UTILS.bytesToSize(m) + '</span>'
+
+    w.chunks.info.el.innerHTML = s
+}
+
+export const prepare_game = (prop)=>{
+    tiles = prop.tiles
     fill_tiles()
+
+    const w = $.LAND.CONF
+    w.chunks.chunkscount_range.el.value = parseInt(prop.chunks)
+    w.chunks.chunkscount_input.el.value = parseInt(prop.chunks)
+    w.chunks.chunkwidth_range.el.value  = parseFloat(prop.chunk_width)
+    w.chunks.chunkwidth_input.el.value  = parseFloat(prop.chunk_width)
+    w.chunks.viewsize_range.el.value    = parseInt(prop.view)
+    w.chunks.viewsize_input.el.value    = parseInt(prop.view)
+
+    w.layers.gridcx_range.el.value        = parseInt(prop.layer_cx)
+    w.layers.gridcx_input.el.value        = parseInt(prop.layer_cx)
+    w.layers.texture0scale_range.el.value = parseFloat(prop.layer_t0_scale)
+    w.layers.texture0scale_input.el.value = parseFloat(prop.layer_t0_scale)
+    w.layers.texture1scale_range.el.value = parseFloat(prop.layer_t1_scale)
+    w.layers.texture1scale_input.el.value = parseFloat(prop.layer_t1_scale)
+    w.layers.size.el.value                = parseInt(prop.texture_size)
+    w.layers.normalf_range.el.value       = parseFloat(prop.normalf)
+    w.layers.normalf_input.el.value       = parseFloat(prop.normalf)
+
+    w.hm.maxheight_range.el.value = parseFloat(prop.hm_max)
+    w.hm.maxheight_input.el.value = parseFloat(prop.hm_max)
+    w.hm.gridcx_range.el.value    = parseInt(prop.hm_cx)
+    w.hm.gridcx_input.el.value    = parseInt(prop.hm_cx)
+
+    update_land_info()
 }
 
 const fill_tiles = ()=>{
@@ -83,10 +124,9 @@ const paint_prepare = ()=>{
     w.conf.btn_del.el.onclick = ()=> land_texture_sel(3,0)
 
     w.conf.btn_save.el.onclick = ()=>{
-        const grid = LAND.getGrid()
-        const width = LAND.getWidth()
-        NET.send_json([INFO.MSG_EDITOR_SAVE_LAYER,NET.game_id,width,width])
-        NET.send(grid)
+        const width = LAND.getPaintWidth()
+        NET.send_json([ INFO.MSG_EDITOR_SAVE_LAYER, NET.game_id, width, width ])
+        NET.send(LAND.getPaintGrid())
     }
 }
 
@@ -120,33 +160,44 @@ const heightmap_prepare = ()=>{
     w.conf.blur.el.onclick  = ()=> hm_mode = 3
 
     w.conf.btn_save.el.onclick = ()=>{
-        const grid = HEIGHTMAP.getGrid()
-        const width = HEIGHTMAP.getWidth()
-        NET.send_json([INFO.MSG_EDITOR_SAVE_HM,NET.game_id,width,width])
-        NET.send(grid)
+        const width = LAND.getHeightmapWidth()
+        NET.send_json([ INFO.MSG_EDITOR_SAVE_HM, NET.game_id, width, width ])
+        NET.send(LAND.getHeightmapGrid())
     }
+
+    w.tools.loadgray.el.onchange = (e)=>{
+        const file = w.tools.loadgray.el.files[0]
+        ASSETS.get_texture_from_file(file, t =>LAND.heightmapLoadGray(t) )
+    }
+
 }
 
 const conf_prepare = ()=>{
     const w = $.LAND.CONF
 
-    const updateConf = ()=>{
-        let t0_scale = parseFloat(w.layers.texture0scale_input.el.value)
-        let t_scale  = parseFloat(w.layers.texturescale_input.el.value)
-        let size = parseInt(w.layers.size.el.value)
-        LAND.setConf(t0_scale,t_scale,size)
+    const updateChunks = ()=>{ 
+        const chunks = parseInt(w.chunks.chunkscount_input.el.value)
+        const view   = parseInt(w.chunks.viewsize_input.el.value)
+        const width  = parseFloat(w.chunks.chunkwidth_input.el.value)
+        LAND.resize(chunks,view,width)
+
+        CAMERA.orbit_set_zone(
+            -LAND.half_map_width,
+            -LAND.half_map_width,
+             LAND.half_map_width,
+             LAND.half_map_width
+        )
+
+        update_land_info()
     }
 
-    const updateHM = ()=>{
-        let maxHeight = parseFloat(w.hm.maxheight_input.el.value)
-        let grid_cx = parseFloat(w.hm.gridcx_input.el.value)
-        if (maxHeight!==HEIGHTMAP.getMaxHeight()){
-            HEIGHTMAP.change_max_height(maxHeight)
-        }
-        if (grid_cx!==HEIGHTMAP.get_grid_cx()){
-            HEIGHTMAP.change_grid_cx(grid_cx)
-            LAND.updateGroundMeshGeometry()
-        }
+    const updatePaint = ()=>{
+        const grid_cx     = parseInt(w.layers.gridcx_input.el.value)
+        const t0scale     = parseFloat(w.layers.texture0scale_input.el.value)
+        const t1scale     = parseFloat(w.layers.texture1scale_input.el.value)
+        const texturesize = parseInt(w.layers.size.el.value)
+        LAND.setPaintParams(grid_cx,t0scale,t1scale,texturesize)
+        update_land_info()
     }
 
     const siblingValueUpdate = (e)=>{
@@ -158,45 +209,46 @@ const conf_prepare = ()=>{
     		e.target.previousElementSibling.value = e.target.value
         }
 
-        if (inp===w.layers.normalf_input.el){
-            let normalf = parseFloat(w.layers.normalf_input.el.value)
-            LAND.setNormalF(normalf)
-            return
+        switch(inp){
+            case w.chunks.chunkscount_input.el: 
+            case w.chunks.viewsize_input.el:
+            case w.chunks.chunkwidth_input.el:
+                                                updateChunks()
+                                                break;
+            case w.layers.gridcx_input.el:
+            case w.layers.texture0scale_input.el: 
+            case w.layers.texture1scale_input.el:
+                                                updatePaint()
+                                                break;
+            case w.layers.normalf_input.el:
+                                                LAND.setNormalF(parseFloat(w.layers.normalf_input.el.value))
+                                                break;
+            case w.hm.maxheight_input.el:       LAND.setHeightmapHeight(parseFloat(w.hm.maxheight_input.el.value))
+                                                break;
+            case w.hm.gridcx_input.el:          LAND.setHeightmapCx(parseInt(w.hm.gridcx_input.el.value))
+                                                update_land_info()
+                                                break;
         }
+       
+    }
 
-        if (inp===w.layers.rwidth_input.el){
-            let rwidth = parseFloat(w.layers.rwidth_input.el.value)
-            CHUNK.setTileWidth(rwidth)
-            LAND.updateGroundMeshGeometry()
-            CAMERA.orbit_set_zone(
-                -CHUNK.half_max_width,
-                -CHUNK.half_max_width,
-                 CHUNK.half_max_width,
-                 CHUNK.half_max_width
-            )
-            return
-        }
+    w.chunks.chunkscount_range.el.oninput = siblingValueUpdate
+    w.chunks.chunkscount_input.el.oninput = siblingValueUpdate
+    w.chunks.viewsize_range.el.oninput    = siblingValueUpdate
+    w.chunks.viewsize_input.el.oninput    = siblingValueUpdate
+    w.chunks.chunkwidth_range.el.oninput  = siblingValueUpdate 
+	w.chunks.chunkwidth_input.el.oninput  = siblingValueUpdate
 
-        if (inp===w.hm.maxheight_input.el || inp===w.hm.gridcx_input.el){
-            updateHM()
-            return
-        }
 
-        updateConf()
-	}
-
+    w.layers.gridcx_range.el.oninput        = siblingValueUpdate 
+    w.layers.gridcx_input.el.oninput        = siblingValueUpdate 
     w.layers.texture0scale_range.el.oninput = siblingValueUpdate 
 	w.layers.texture0scale_input.el.oninput = siblingValueUpdate
-    w.layers.texturescale_range.el.oninput  = siblingValueUpdate 
-	w.layers.texturescale_input.el.oninput  = siblingValueUpdate
-    w.layers.normalf_range.el.oninput  = siblingValueUpdate 
-	w.layers.normalf_input.el.oninput  = siblingValueUpdate
-    w.layers.rwidth_range.el.oninput  = siblingValueUpdate 
-	w.layers.rwidth_input.el.oninput  = siblingValueUpdate
-    w.layers.size.el.oninput = updateConf
-    w.layers.restore.el.onclick = ()=>{
-        LAND.load(NET.game_id)
-    }
+    w.layers.texture1scale_range.el.oninput = siblingValueUpdate 
+	w.layers.texture1scale_input.el.oninput = siblingValueUpdate
+    w.layers.normalf_range.el.oninput       = siblingValueUpdate 
+	w.layers.normalf_input.el.oninput       = siblingValueUpdate
+    w.layers.size.el.oninput                = updatePaint
 
 
     w.hm.maxheight_range.el.oninput = siblingValueUpdate
@@ -204,8 +256,44 @@ const conf_prepare = ()=>{
     w.hm.gridcx_range.el.oninput    = siblingValueUpdate
 	w.hm.gridcx_input.el.oninput    = siblingValueUpdate
 
-    w.hm.restore.el.onclick = ()=>{
-        HEIGHTMAP.load(NET.game_id)
+    w.layers.restore.el.onclick = ()=> LAND.paintLoad(NET.game_id)
+    w.hm.restore.el.onclick     = ()=> LAND.heightmapLoad(NET.game_id)
+    
+    w.tools.paint_clear_all.el.onclick = ()=> LAND.paintClearAll()
+
+    w.btns.save.el.onclick = ()=>{
+        // сохраняем настройки
+        const param = {
+            tiles          : tiles,
+            chunks         : parseInt(w.chunks.chunkscount_input.el.value),
+            chunk_width    : parseFloat(w.chunks.chunkwidth_input.el.value),
+            view           : parseInt(w.chunks.viewsize_input.el.value),
+            texture_size   : parseInt(w.layers.size.el.value),
+            normalf        : parseFloat(w.layers.normalf_input.el.value),
+            layer_cx       : parseInt(w.layers.gridcx_input.el.value),
+            layer_t0_scale : parseFloat(w.layers.texture0scale_input.el.value),
+            layer_t1_scale : parseFloat(w.layers.texture1scale_input.el.value),
+            hm_cx          : parseInt(w.hm.gridcx_input.el.value),
+            hm_max         : parseFloat(w.hm.maxheight_input.el.value),
+            minimap_cx     : 4,
+        }
+
+        NET.send_json([
+            INFO.MSG_EDITOR_LAND_PARAM,
+            NET.game_id,
+            param,
+        ])
+
+        // сохраняем покраску
+        let width = LAND.getPaintWidth()
+        NET.send_json([ INFO.MSG_EDITOR_SAVE_LAYER, NET.game_id, width, width ])
+        NET.send(LAND.getPaintGrid())
+        
+        // сохраняем карту высот
+        width = LAND.getHeightmapWidth()
+        NET.send_json([ INFO.MSG_EDITOR_SAVE_HM, NET.game_id, width, width ])
+        NET.send(LAND.getHeightmapGrid())
+
     }
 }
 
@@ -221,24 +309,27 @@ export const land_texture_sel = (mode,n)=>{
             tiles.length = tiles.length-1
         }
     }
-    LAND.prepare_tiles(tiles)
+    LAND.preparePaintTiles(tiles)
     fill_tiles()
     save_tiles_list()
     
 }
 
 
-export const set_mouse_position = (rx,rz)=>{
+export const set_mouse_position = (mouse)=>{
 
     let mode = $.LAND.dialog_active_tab
     if (mode===0){
         const size = parseFloat($.LAND.PAINT.conf.size.el.value)
-        LAND.set_mask_position(rx,rz,size)
+        LAND.set_mask_position(mode,mouse,size)
     }
 
     if (mode===1){
+
+        $.LAND.HM.conf.info.el.innerText = mouse.x.toFixed(2)+'  '+mouse.y.toFixed(2)+'  '+mouse.z.toFixed(2)
+
         const size = parseFloat($.LAND.HM.conf.size.el.value)
-        LAND.set_mask_position(rx,rz,size)
+        LAND.set_mask_position(mode,mouse,size)
     }
     
     /*
@@ -256,14 +347,18 @@ export const set_point = (x,y)=>{
     // покраска
     if (mode===0){
         const size = parseFloat($.LAND.PAINT.conf.size.el.value)
-        LAND.set_point(x,y, mask_selected, tile_selected, size)
+        LAND.setPaint(x,y, mask_selected, tile_selected, size)
     }
 
     // карта высот
     if (mode===1){
-        const size = parseFloat($.LAND.HM.conf.size.el.value)
-        const power = parseFloat($.LAND.HM.conf.power.el.value)
-        HEIGHTMAP.set_heightmap(x,y,hm_mode,mask_selected2,size,power)
+        const size  = parseFloat($.LAND.HM.conf.size.el.value)
+        let power   = parseFloat($.LAND.HM.conf.power.el.value)
+        const height = parseFloat($.LAND.HM.conf.height.el.value)
+        if (hm_mode===2){
+            power = height
+        }
+        LAND.setHeightmap(x,y,hm_mode,mask_selected2,size,power)
     }
 
     // гексы

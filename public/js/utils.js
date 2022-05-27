@@ -192,19 +192,40 @@ export const hex_selector = (color, scale)=> {
     )
     return new LineSegments(geometry, material)
 }
+*/
 
 export const draw_line = (o1,o2)=>{
     const material = new LineBasicMaterial({
         color: 0xff0000,
     })
-  
+
+    let oo1 = [0,0,0]
+    let oo2 = [0,0,0]
+    
+    let scale = 36/128
+    oo1[0] = (o1[0]*scale - 18)
+    oo1[1] = o1[1]
+    oo1[2] = (o1[2]*scale - 18)
+
+    oo2[0] = (o2[0]*scale - 18)
+    oo2[1] =  o2[1]
+    oo2[2] = (o2[2]*scale - 18)
+    
+
     const geometry = new BufferGeometry().setFromPoints(     
         [
-            new Vector3( o1[0], o1[1], o1[2] ),
-            new Vector3( o2[0], o2[1], o2[2] ) 
+            new Vector3( oo1[0], oo1[1], oo1[2] ),
+            new Vector3( oo2[0], oo2[1], oo2[2] ) 
         ]
    )
     
     return new Line( geometry, material )
 }
-*/
+
+
+export const bytesToSize = (bytes)=>{
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+    if (bytes == 0) return '0 Byte'
+    const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)))
+    return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i]
+ }

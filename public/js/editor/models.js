@@ -7,7 +7,7 @@ import * as NET     from '/js/net.js'
 import * as RENDER  from '/js/render.js'
 import { show, hide, isVisible } from '/js/strapony.js'
 import { sel_dialog } from '/js/editor/textures.js'
-import { load_texture, get_model, prepare_material } from '/js/assets.js'
+import { get_model, prepare_material } from '/js/assets.js'
 import { GLTFExporter } from '/lib/GLTFExporter.js'
 
 let models = []

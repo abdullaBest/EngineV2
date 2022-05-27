@@ -10,7 +10,6 @@ import * as RENDER    from './render.js'
 import * as CONTROL   from './controls.js'
 import * as CAMERA    from './camera_orbit.js'
 import * as LAND      from './land.js'
-import * as CHUNK     from './chunk.js'
 import * as ASSETS    from './assets.js'
 import * as HEIGHTMAP from './heightmap.js'
 
@@ -115,34 +114,38 @@ const mouse_over_grid = (_x,_y)=>{
 
 const editor_tick = ()=>{
 
-    mouse_over_grid(CONTROL.mouse.ox, CONTROL.mouse.oy)
-    let rx = RENDER.mouse.x + CHUNK.half_max_width
-    let ry = RENDER.mouse.y + CHUNK.half_max_width
+    // определяем положение курсора в 3д пространстве
+    RENDER.mouse.x = CONTROL.mouse.ox
+    RENDER.mouse.y = CONTROL.mouse.oy
+    RENDER.mouse.z = 0.0
+    RENDER.raycaster.setFromCamera( RENDER.mouse, RENDER.camera )
 
+    LAND.over_heightmap(RENDER.raycaster.ray,RENDER.mouse)
+
+    // editor
     // рисуем на поверхности
     if (editor_mode===0){
-        set_mouse_position(rx,ry)
+        set_mouse_position(RENDER.mouse)
     }
 
     if ( CONTROL.mouse.btn_active & (CONTROL.MOUSE_BTN_LEFT+CONTROL.MOUSE_CLICK)!==0) {
         CONTROL.click_release()
-        set_point(rx, ry)
+        // editor
+        set_point(RENDER.mouse.x,RENDER.mouse.z)
     }else{
-        if (HEIGHTMAP.needs_update_data){
-            HEIGHTMAP.update_heightmap_data()
-        }
+        LAND.check_heightmap_data()
     }
+
 }
 
 const game_tick = ()=>{
     RENDER.mouse_over_grid(0, 0)
     //RENDER.mouse.x = 0
     //RENDER.mouse.y = 0
-    CHUNK.update_viewport(RENDER.mouse.x,RENDER.mouse.y)
+    
+    LAND.update_view(RENDER.mouse.x,RENDER.mouse.y)
 
     editor_tick()
-
-    //LAND.update_viewport(CAMERA.orbit_center_x,CAMERA.orbit_center_z)
 
     //let camera_x = Math.trunc(CAMERA.orbit_center_x)
     //let camera_z = Math.trunc(CAMERA.orbit_center_z)
@@ -204,8 +207,6 @@ const on_message = (type,m)=>{
             console.log(m)
             ASSETS.prepareEditor(m.t,m.m)
 
-            LAND.prepare_tiles([0])
-
             texture_prepare(m.t)
             models_prepare(m.m)
             land_prepare()
@@ -223,34 +224,21 @@ const on_message = (type,m)=>{
         break;
         // загружаем данные по игре
         case INFO.MSG_EDITOR_GET_GAME:
-            let global = m.g.global
-            
-            LAND.free()       
-            CHUNK.prepare(global.land.size,global.land.tile_width)
+            const global = m.g.global
 
-            LAND.prepare_tiles(global.land.tiles)         
-            land_prepare_game(global.land.tiles)
-            
-            LAND.create_map(
-                global.land.hm_cx, 
-                global.land.hm_max, 
-                global.land.layer_width, 
-                global.land.layer_cx,
-                global.land.minimap_cx,
-            )
-
-            LAND.load(NET.game_id)
-            HEIGHTMAP.load(NET.game_id)
+            LAND.load( NET.game_id, global.land )
 
             CAMERA.orbit_set_zone(
-                -CHUNK.half_max_width,
-                -CHUNK.half_max_width,
-                 CHUNK.half_max_width,
-                 CHUNK.half_max_width
+                -LAND.half_map_width,
+                -LAND.half_map_width,
+                 LAND.half_map_width,
+                 LAND.half_map_width
             )
 
+            // editor
+            land_prepare_game(global.land)
+
             console.log(m)
-            //EDITOR.game_data(m.g,m.h)
         break
         // обновляем текстуру
         case INFO.MSG_EDITOR_SAVE_TXT:
@@ -278,17 +266,7 @@ const main_render_shadow = ()=>{
 }
 
 const main_render = ()=>{
-
-    // ----------------
-    // рисуем землю чанков
-    for (let i = 0; i < CHUNK.viewport_free_n; i++) {
-        const t = CHUNK.viewport[CHUNK.viewport_free[i]]
-        if (!t.ground_ready){
-            continue
-        }
-        LAND.render_block(t.x,t.y,t.ground)
-    } 
-
+    LAND.render()
     // ----------------
     // рисуем миникарту
     /*
@@ -306,19 +284,26 @@ const main_render = ()=>{
 }
 
 const main_render_after = ()=>{
-    // подготавливаем
-    for (let i = 0; i < CHUNK.viewport_free_n; i++) {
-        let t = CHUNK.viewport[CHUNK.viewport_free[i]]
-        if (!t.ground_ready){
-            t.ground_ready = LAND.layer_render(t.x,t.y,t.ground)
-            break;
-        }
-    }
+    LAND.render_after()
 }
 
 const manager_callback = (f)=>{
-    if ((f & INFO.MCFLAG_LAND)!==0){
-        LAND.refresh_layers()
+    if (f===0){
+        console.log('asset loaded without flag')
+        return
+    }
+
+    // тайлы для paint layer загружены
+    if ((f & INFO.ASSETS_LAND_TILES)!==0){
+        LAND.loaded_paint_tiles()
+    }
+    // карта покраски загружена
+    if ((f & INFO.ASSETS_LAND_LAYER)!==0){
+        LAND.loaded_paint_layer()
+    }
+    // карта высот загружена
+    if ((f & INFO.ASSETS_LAND_HEIGHTMAP)!==0){
+        LAND.loaded_heightmap()
     }
 }
 
@@ -327,18 +312,28 @@ Promise.all([
     GUI.prepare,
     ASSETS.prepare,
 ]).then(()=>{
-    LAND.prepare()
     AUTH.prepare()
 
     NET.prepare(on_message,AUTH.on_message)
     //
     //EDITOR.prepare()
-    RENDER.prepare(main_render_before,main_render_shadow,main_render,main_render_after, manager_callback)
+    ASSETS.setCallback(manager_callback)
+    RENDER.prepare(main_render_before,main_render_shadow,main_render,main_render_after)
     RENDER.classic_render()
     //
-    CHUNK.prepare(32,9)
-
-    LAND.create_map(16,512,512,16,128)
+    LAND.create({    
+        chunks         : 1,
+        chunk_width    : 1,
+        view           : 1,
+        texture_size   : 64,
+        normalf        : 0.1,
+        layer_cx       : 4,
+        layer_t0_scale : 1,
+        layer_t1_scale : 1,
+        hm_cx          : 4,
+        hm_max         : 1,
+        minimap_cx     : 4,
+    })
 
     game_timer = setInterval(game_tick,100)
 })

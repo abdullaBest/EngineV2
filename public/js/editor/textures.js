@@ -132,40 +132,7 @@ const txt_load_prepare = ()=>{
     $.ASSETS.txt_edt.el.onclick = ()=>{
         txt_edit(txt_selected_n)
     }
-    $.ASSETS.txt_sel.el.onclick = ()=>{
-        /*
-        if (texture_sel_mode===0){
-
-        }
-        // заменяет текстуру для paint
-        if (texture_sel_mode===1){
-            if (game.global.layer_textures.indexOf(txt_selected_n)===-1){
-                game.global.layer_textures[tile_selected] = txt_selected_n
-                for (let i=0;i<game.global.layer_textures.length;i++){
-                    ASSET.textures_set(game.global.layer_textures[i])
-                }
-                ASSET.load_textures(()=>{
-                    LAND.prepare_tiles(game.global.layer_textures)
-                    paint_refresh()
-                    paint_save_textures_list()
-                })
-            }
-        }
-        // добавляет текстуру в список paint 
-        if (texture_sel_mode===2){
-            if (game.global.layer_textures.indexOf(txt_selected_n)===-1){
-                game.global.layer_textures.push(txt_selected_n)
-                for (let i=0;i<game.global.layer_textures.length;i++){
-                    ASSET.textures_set(game.global.layer_textures[i])
-                }
-                ASSET.load_textures(()=>{
-                    LAND.prepare_tiles(game.global.layer_textures)
-                    paint_refresh()
-                    paint_save_textures_list()
-                })
-            }
-        }
-        */
+    $.ASSETS.txt_sel.el.onclick = ()=>{        
         // defuse, normal map, arm
         if (mode===3 || mode===4 || mode===5 ){
             textures_sel(mode,txt_selected_n)

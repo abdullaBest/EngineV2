@@ -81,6 +81,11 @@ const messagesJSON = (user,s)=>{
             EDITOR.save_paint_list(id,s[2])
         }
         break;
+        case INFO.MSG_EDITOR_LAND_PARAM:{
+            let id   = parseInt(s[1])
+            EDITOR.save_land_param(id,s[2])
+        }
+        break;
         case INFO.MSG_EDITOR_SAVE_HEX:{
             let id   = parseInt(s[1])
             EDITOR.save_hexgrid(id,s[2])

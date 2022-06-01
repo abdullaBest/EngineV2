@@ -104,6 +104,34 @@ export const get_texture = (n)=>{
     return a.t
 }
 
+export const loadModel = (n)=>{
+    const model = models[n]
+    if (model===undefined){
+        return
+    }
+    if (model.g===null){
+        requestCount = requestCount + 1
+        gltfloader.load('/m/'+model.n+'.g',g=>{
+            model.g = g
+            prepare_materials(model)
+            update_requests_count()
+        },xhr=>{
+        },err=>{
+            console.log(err)
+        })
+
+        // загружаем текстуры
+        for (let name in model.m){
+            const m = model.m[name]
+            get_texture(m.defuse)
+            get_texture(m.normals)
+            get_texture(m.arm)
+        }
+    }
+}
+
+export const getModel = n=>models[n]
+
 export const set_assets_flag = (flag)=>{
     callback_flag = callback_flag | flag
     if (requestCount===0){
@@ -140,9 +168,8 @@ export const prepare_material = (materials,obj)=>{
     obj.material = m
 }
 
-const prepare_materials = (model)=>{
-    traverse(model.g.scene, obj => prepare_material(model.m,obj) )    
-}
+const prepare_materials = (model)=>traverse(model.g.scene, obj => prepare_material(model.m,obj) )    
+
 
 export const get_model = (n,callback)=>{
     const model = models[n]

@@ -352,7 +352,13 @@ export const save_land_param = (game_id,data)=>{
     fs.writeFileSync('games/'+game_id+'.json',JSON.stringify(game,undefined,2))
 }
 
-export const save_hexgrid = (id,data)=>{
+export const save_hex_param = (game_id,data)=>{
+    const game = games[game_id]
+    game.global.hexgrid = data
+    fs.writeFileSync('games/'+game_id+'.json',JSON.stringify(game,undefined,2))
+}
+
+export const save_hex_grid = (id,data)=>{
     fs.writeFileSync('games/'+id+'_hexgrid.json',JSON.stringify(data,undefined,2))
     console.log('hexgrid saved')
 }

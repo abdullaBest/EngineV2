@@ -51,7 +51,7 @@ const sprite_mesh = new Mesh(UTILS.pass_geometry, new ShaderMaterial({
         'void main() {',
             'lUv = uv;',
             'gl_Position = vec4( rx+position.x*scale,ry+position.y*scale, 0.0, 1.0 );',
-            'lUv2 = vec2(ox + gl_Position.x*gsize,oy + gl_Position.y*gsize);',
+            'lUv2 = vec2(ox + gl_Position.x*gsize,1.0 - (oy + gl_Position.y*gsize));',
         '}'].join(''),
     fragmentShader: [
         'uniform sampler2D mask;',
@@ -157,15 +157,15 @@ const make_layer_list = (cx,cy)=>{
 
     sx = Math.max( sx,0 )
     sy = Math.max( sy,0 )
-    ex = Math.min( ex, CHUNKS.count_x*layer_grid_cx )
-    ey = Math.min( ey, CHUNKS.count_y*layer_grid_cx )
+    ex = Math.min( ex, width )
+    ey = Math.min( ey, width )
 
-    const row_size = (CHUNKS.count_x*layer_grid_cx)*3
+    const row_size = width*3
     const list = layer_list[cy*CHUNKS.count_x+cx]
-    let pp = 0
+    let pp = 0 
 
     for (let y=sy;y<ey;y++){
-        let p = y*row_size + sx*3
+        let p = (y*row_size + sx*3) + 1
         for (let x=sx;x<ex;x++){
             const m = layer_grid[p+0]
             if (m!==0){
@@ -183,8 +183,8 @@ const make_layer_list = (cx,cy)=>{
         if (a===0 || b===0){
             return -1
         }
-        const m1 = layer_grid[a+2]
-        const m2 = layer_grid[b+2]
+        const m1 = layer_grid[a+1]
+        const m2 = layer_grid[b+1]
         return m2-m1
     })
 }
@@ -300,6 +300,7 @@ export const paint = (cx, cy, target) => {
             break
         }
 
+        p = p - 1
         let y = Math.trunc(p/row_size)
         let x = Math.trunc((p - y*row_size)/3)
 

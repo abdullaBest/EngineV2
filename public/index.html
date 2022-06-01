@@ -14,6 +14,12 @@
             wait...
         </div>
 
+        <div id="MENU">
+            <button id=".assets">assets</button>
+            <button id=".land">land</button>
+            <button id=".hex">hex</button>
+        </div>
+
         <div id="AUTH" style="display: none;">
             <form id=".reg" name="registration" style="display: none;">
                 <ul>
@@ -40,7 +46,7 @@
             </form>
         </div>
 
-        <div id="ASSETS" component="dialog" class="dialog_window">
+        <div id="ASSETS" component="dialog" class="dialog_window" style="display:none;">
             <div class="dialog">
                 <div>
                     <div id=".tab_btn1" class="tab">Library</div>
@@ -52,7 +58,34 @@
                 
                 <div>
 
-                    <div>1</div>
+                    <div id=".LIBRARY">
+                        <div id=".list" component="list"></div>
+                        <div id=".edit">
+                            <div>
+                                <input id=".oldgroup" type="text" disabled style="display: none;">
+                                <input id=".oldname" type="text" disabled>
+                                <input id=".group" type="text" list="library_group_names" placeholder="group">
+                                <datalist id="library_group_names"></datalist>
+                                <input id=".name" type="text" placeholder="name">
+                                <button id=".add">add</button>
+                                <button id=".change">change</button>
+                                <button id=".delete">del</button>
+                            </div>
+                            <div>
+                                <textarea id=".prop"></textarea>
+                            </div>
+                            <div>
+                                <textarea id=".info"></textarea>
+                            </div>
+                            <div>
+                                <button id=".from_model">from model editor</button>
+                            </div>
+                            <div>
+                                <textarea id=".asset"></textarea>
+                            </div>
+
+                        </div>
+                    </div>
 
                     <div id=".TEXTURES">
                         <div id=".groups" component="list">
@@ -152,7 +185,7 @@
             </div>
         </div>   
 
-        <div id="MODEL_EDIT" component="dialog" class="dialog_window" style="left:0px; top:100px; width:320px; height:600px;">
+        <div id="MODEL_EDIT" component="dialog" class="dialog_window" style="display: none; left:0px; top:100px; width:320px; height:600px;">
             <div class="dialog">
                 <div>
                     <div class="title">Model</div>
@@ -309,7 +342,7 @@
             </div>
         </div>
 
-        <div id="LAND" component="dialog" class="dialog_window" style="left:0px; top:100px; width:320px; height:600px;">
+        <div id="LAND" component="dialog" class="dialog_window" style="display: none; left:0px; top:100px; width:320px; height:600px;">
             <div class="dialog">
                 <div>
                     <div id=".tab_btn1" class="tab">Paint</div>
@@ -478,5 +511,129 @@
             </div>
         </div>        
         
+        <div id="HEXGRID" component="dialog" class="dialog_window" style="display: none; left:0; top:100px; width:280px; height:600px;">
+            <div class="dialog">
+
+                <div>
+                    <div id=".tab_btn1" class="tab">Grid</div>
+                    <div id=".tab_btn3" class="tab">Conf</div>
+                    <div class="title">HEXGRID</div>
+                    <div class="close"></div>
+                </div> 
+
+                <div>
+                    <div id=".edit">
+                        <div id=".info">
+
+                        </div>
+                        <div>
+                            <select id=".list" size="10">
+
+                            </select>
+                        </div>
+                        <div id=".props">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>name</th><th>value</th>
+                                    </tr>
+                                </thead>
+                                <tbody id=".table">
+                                </tbody>
+                            </table>
+                        </div>
+                        <div>
+                            <button id=".btn_save">save</button>
+                            <div id=".pos"></div>
+                            <div id=".pos2"></div>
+                            <div id=".objects" component="list">
+                            
+                            </div>
+                            <div class="hexgrid_table">
+                                <table id=".prop">
+                                
+                                </table>
+                            </div>
+                            <button id=".btn_add">add</button>
+                            <button id=".btn_del">del</button>
+                            <select id=".lib"></select>
+                            <br>
+                            <label>
+                                fill
+                                <input id=".chk_fill" name="fill" type="checkbox">
+                            </label>
+                            <label>
+                                empty
+                                <input id=".chk_empty" name="empty" type="checkbox" checked>
+                            </label>
+                            <br>
+                            <label>
+                                clear
+                                <input id=".chk_clear" name="clear" type="checkbox">
+                            </label>
+            
+                            <button id=".generator">generate</button>
+                            <button id=".clearall">clear map</button>
+                        </div>
+                    </div>
+
+                    <div id=".conf">
+                        <div>
+                            <button id=".save">save</button>
+                            <div id=".info">
+
+                            </div>
+                            hex:
+                            <div>
+                                <input id=".color" type="color" value="#ffffff">
+                                <input id=".scale_range" class="range_input"  type="range"  min=0.1 max=32 step=0.01 value=1>
+                                <input id=".scale_input" class="number_input" type="number" min=0.1 max=32 step=0.01 value=1>
+                            </div>
+                            intensity:
+                            <div>
+                                <input id=".intensity_range" class="range_input"  type="range"  min=0.0 max=1 step=0.01 value=1>
+                                <input id=".intensity_input" class="number_input" type="number" min=0.0 max=1 step=0.01 value=1>
+                            </div>
+                            line width:
+                            <div>
+                                <input id=".linew_range" class="range_input"  type="range"  min=1 max=64 step=0.1 value=1>
+                                <input id=".linew_input" class="number_input" type="number" min=1 max=64 step=0.1 value=1>
+                            </div>
+                            hex scale:
+                            <div>
+                                <input id=".hexscale_range" class="range_input"  type="range"  min=0.1 max=1 step=0.01 value=1>
+                                <input id=".hexscale_input" class="number_input" type="number" min=0.1 max=1 step=0.01 value=1>
+                            </div>
+                            texture size:
+                            <div>
+                                <select id=".twidth">
+                                    <option value="64">64</option>
+                                    <option value="128">128</option>
+                                    <option value="256">256</option>
+                                    <option value="512">512</option>
+                                    <option value="1024">1024</option>
+                                    <option value="2048">2048</option>
+                                    <option value="4096">4096</option>
+                                </select>
+                            </div>
+                            blur:
+                            <div>
+                                <input id=".blur_range" class="range_input"  type="range"  min=0 max=10 step=0.01 value=1>
+                                <input id=".blur_input" class="number_input" type="number" min=0 max=10 step=0.01 value=1>
+                            </div>
+                            <button id=".create">create</button>
+                        </div>
+                        
+                    </div>
+                </div>
+
+                <div style="display:none">
+                    <div></div>
+                    <div></div>
+                </div>
+
+            </div>
+        </div> 
+
     </body>      
 </html>

@@ -85,6 +85,11 @@ input[type='range']::-webkit-slider-thumb {
     width: 10px;
 }
 
+input[type="color"]{
+    width:32px;
+}
+
+
 .file_btn{
     width: 30px;
     display: inline-grid;
@@ -102,7 +107,6 @@ input[type='range']::-webkit-slider-thumb {
     z-index: 0;
 }
 
-
 #WAIT{
     display:none;
     position: absolute;
@@ -117,6 +121,13 @@ input[type='range']::-webkit-slider-thumb {
     border:1px solid black;
 }
 
+#MENU{
+    position: absolute;
+    left:0;
+    top:0;
+    width: 200px;
+    height: 25px;
+}
 /*
     AUTH
 */
@@ -154,6 +165,85 @@ input[type='range']::-webkit-slider-thumb {
     font-size:18px
 }
 
+/*
+    LIBRARY
+*/
+#ASSETS\.LIBRARY{
+    height: 100%;
+}
+#ASSETS\.LIBRARY\.list {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: auto;
+    align-self: auto;
+    order: 0;
+    font-size: 1em;
+    min-width: 140px;
+    max-width: 140px;
+}
+
+#ASSETS\.LIBRARY\.edit {
+    flex-grow: 4;
+    overflow: auto;
+    margin: 0;
+    padding: 10px 0 0 10px;
+
+    display: grid; 
+    grid-template-rows: 30px 1fr 30px 1fr;
+    grid-template-columns: 1fr 1fr;
+    
+    gap: 0px;
+    height: calc(100% - 10px);
+}
+
+#ASSETS\.LIBRARY\.edit\.oldname{
+    width:140px;
+}
+#ASSETS\.LIBRARY\.edit\.group{
+    width:140px;
+}
+
+#ASSETS\.LIBRARY\.edit > div:nth-child(1){
+    grid-row-start: 1;
+    grid-column-start: 1;
+    grid-row-end: 1;
+    grid-column-end: span 2;
+}    
+
+#ASSETS\.LIBRARY\.edit > div:nth-child(2) {
+    grid-row-start: 2;
+    grid-column-start: 1;
+    grid-row-end: 2;
+    grid-column-end: 1;
+}
+
+#ASSETS\.LIBRARY\.edit > div:nth-child(3) {
+    grid-row-start: 2;
+    grid-column-start: 2;
+    grid-row-end: 2;
+    grid-column-end: 2;
+} 
+
+#ASSETS\.LIBRARY\.edit > div:nth-child(4){
+    grid-row-start: 3;
+    grid-column-start: 1;
+    grid-row-end: 3;
+    grid-column-end: span 2;
+}    
+#ASSETS\.LIBRARY\.edit > div:nth-child(5){
+    grid-row-start: 4;
+    grid-column-start: 1;
+    grid-row-end: 4;
+    grid-column-end: span 2;
+}    
+
+#ASSETS\.LIBRARY\.edit textarea{
+    border: none;
+    outline: none;
+    resize: none; 
+    width: calc(100% - 10px);
+    height: calc(100% - 10px);
+}
 /*
     TEXTURES
 */
@@ -447,4 +537,65 @@ input[type='range']::-webkit-slider-thumb {
     padding: 10px 0 0 10px;
     border-top: 1px solid gray;
     color: rgb(196, 196, 196);
+}
+
+/*
+ HEXGRID
+*/
+#HEXGRID\.edit, #HEXGRID\.conf{
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+#HEXGRID\.edit\.info{
+    color: rgb(196, 196, 196);
+}
+
+#HEXGRID\.edit\.list{
+    width: 100%;
+}
+
+#HEXGRID\.edit\.props{
+    height: 200px;
+    overflow: auto;
+}
+#HEXGRID\.edit\.props table{
+        font-family: Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+    color:black;
+}
+#HEXGRID\.edit\.props table th{
+    background-color: #04AA6D;
+    color: white;
+ 
+}
+#HEXGRID\.edit\.props table td, #HEXGRID\.edit table th{
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+#HEXGRID\.edit\.props table tr:nth-child(odd){
+    background-color: #ffffff;
+}
+#HEXGRID\.edit\.props table tr:nth-child(even){
+    background-color: #f2f2f2;
+}
+  
+#HEXGRID\.edit\.props table tr:hover {
+    background-color: #ddd;
+}
+ 
+
+#HEXGRID\.conf>div{
+    margin: 10px 0 0 10px;
+}
+
+#HEXGRID\.conf\.info{
+    color: rgb(196, 196, 196);
+}
+
+#HEXGRID span{
+    color: white;
 }

@@ -11,18 +11,21 @@ import * as CONTROL   from './controls.js'
 import * as CAMERA    from './camera_orbit.js'
 import * as LAND      from './land.js'
 import * as ASSETS    from './assets.js'
-import * as HEIGHTMAP from './heightmap.js'
+import * as LIBRARY   from './library.js'
+import * as HEXGRID   from './hexgrid.js'
 
 import { prepare as texture_prepare, set_texture} from './editor/textures.js' 
 import { prepare as models_prepare, render as models_editor_render, fbx_converted, set_model } from './editor/models.js' 
 import { prepare as land_prepare, prepare_game as land_prepare_game, set_mouse_position, set_point} from './editor/land.js' 
+import { prepare as hexgrid_prepare, setParam as hexgrid_set_param, set_position as hex_set_position, select as hex_select } from './editor/hexgrid.js' 
+import { prepare as lib_prepare } from './editor/library.js' 
 
 let ping_timer = 0
 let game_timer = 0
 let last_x     = 0
 let last_y     = 0
 
-let editor_mode = 0 //
+let editor_mode = -1 // 0-land   1-hex
 
 const calc_angle = (d)=>{
     CAMERA.orbit_calc_angle(d)
@@ -84,33 +87,6 @@ const camera_control = ()=>{
     }
 }
 
-const mouse_over_grid = (_x,_y)=>{
-
-    RENDER.mouse.x = _x
-    RENDER.mouse.y = _y
-    RENDER.mouse.z = 0.0
-    RENDER.raycaster.setFromCamera( RENDER.mouse, RENDER.camera )
-
-    if (RENDER.raycaster.ray.direction.y>=0){
-        return
-    }
-
-    if (!HEIGHTMAP.ray_vs_heightmap(
-        RENDER.raycaster.ray.origin.x,
-        RENDER.raycaster.ray.origin.y,
-        RENDER.raycaster.ray.origin.z,
-        RENDER.raycaster.ray.direction.x,
-        RENDER.raycaster.ray.direction.y,
-        RENDER.raycaster.ray.direction.z
-    )){
-        return false
-    }
-
-    RENDER.mouse.y = RENDER.mouse.z
-
-    return true
-}
-
 
 const editor_tick = ()=>{
 
@@ -123,18 +99,33 @@ const editor_tick = ()=>{
     LAND.over_heightmap(RENDER.raycaster.ray,RENDER.mouse)
 
     // editor
-    // рисуем на поверхности
-    if (editor_mode===0){
-        set_mouse_position(RENDER.mouse)
+    switch(editor_mode){
+        // рисуем на поверхности
+        case 0:{
+                    set_mouse_position(RENDER.mouse)
+                    if ( (CONTROL.mouse.btn_active & (CONTROL.MOUSE_BTN_LEFT+CONTROL.MOUSE_CLICK))!==0) {
+                        CONTROL.click_release()
+                        // editor
+                        set_point(RENDER.mouse.x,RENDER.mouse.z)
+                    }else{
+                        LAND.check_heightmap_data()
+                    }
+                }
+                break;
+        // hexgrid
+        case 1:{
+                    hex_set_position(RENDER.mouse)
+
+                    if ( (CONTROL.mouse.btn_active & (CONTROL.MOUSE_BTN_LEFT+CONTROL.MOUSE_CLICK))!==0) {
+                        CONTROL.click_release()
+                        // editor
+                        hex_select()
+                    }
+                }
+                break;
+
     }
 
-    if ( CONTROL.mouse.btn_active & (CONTROL.MOUSE_BTN_LEFT+CONTROL.MOUSE_CLICK)!==0) {
-        CONTROL.click_release()
-        // editor
-        set_point(RENDER.mouse.x,RENDER.mouse.z)
-    }else{
-        LAND.check_heightmap_data()
-    }
 
 }
 
@@ -210,9 +201,10 @@ const on_message = (type,m)=>{
             texture_prepare(m.t)
             models_prepare(m.m)
             land_prepare()
-            //EDITOR.init(m)
+            hexgrid_prepare()
+            
             NET.load_game(1)
-            //EDITOR.load()
+            
             CAMERA.prepare(0,0,0)
             calc_angle(0)
 
@@ -235,9 +227,16 @@ const on_message = (type,m)=>{
                  LAND.half_map_width
             )
 
+            LIBRARY.prepare(m.g.lib)
+
+            HEXGRID.prepareParam(global.hexgrid)
+            HEXGRID.prepareGrid(m.h)
+            
             // editor
             land_prepare_game(global.land)
-
+            lib_prepare(m.g.lib)
+            hexgrid_set_param()
+            
             console.log(m)
         break
         // обновляем текстуру
@@ -267,6 +266,7 @@ const main_render_shadow = ()=>{
 
 const main_render = ()=>{
     LAND.render()
+    HEXGRID.render()
     // ----------------
     // рисуем миникарту
     /*
@@ -305,6 +305,32 @@ const manager_callback = (f)=>{
     if ((f & INFO.ASSETS_LAND_HEIGHTMAP)!==0){
         LAND.loaded_heightmap()
     }
+
+    // library - модели и текстуры загружены
+    if ((f & INFO.ASSETS_LIBRARY)!==0){
+        LIBRARY.loaded()
+    }
+
+    // подготовка сетки - обычно вызывается после того как все модели загружены
+    //if ((f & INFO.ASSETS_HEXGRID)!==0){
+    //    HEXGRID.prepareGrid(m.h)
+    //}
+
+
+}
+
+const menu_prepare = ()=>{
+    $.MENU.assets.el.onclick = ()=>{
+        $.ASSETS.el.style.display = 'block'
+    }
+    $.MENU.land.el.onclick = ()=>{
+        editor_mode = 0
+        $.LAND.el.style.display = 'block'
+    }
+    $.MENU.hex.el.onclick = ()=>{
+        editor_mode = 1
+        $.HEXGRID.el.style.display = 'block'
+    }
 }
 
 // Подготовка
@@ -334,6 +360,10 @@ Promise.all([
         hm_max         : 1,
         minimap_cx     : 4,
     })
+
+    HEXGRID.create(10,10)
+
+    menu_prepare()
 
     game_timer = setInterval(game_tick,100)
 })

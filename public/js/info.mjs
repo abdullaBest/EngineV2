@@ -32,11 +32,12 @@ export const MSG_EDITOR_MODEL       = 103
 export const MSG_EDITOR_LIBRARY     = 104
 export const MSG_EDITOR_PAINT_LIST  = 105
 export const MSG_EDITOR_LAND_PARAM  = 106
-export const MSG_EDITOR_SAVE_HEX    = 107
-export const MSG_EDITOR_SAVE_TMAP   = 108
-export const MSG_EDITOR_SAVE_LAYER  = 109
-export const MSG_EDITOR_SAVE_HM     = 110
-export const MSG_EDITOR_FBX_CONV    = 111
+export const MSG_EDITOR_HEX_PARAM   = 107
+export const MSG_EDITOR_HEX_GRID    = 108
+export const MSG_EDITOR_SAVE_TMAP   = 109
+export const MSG_EDITOR_SAVE_LAYER  = 110
+export const MSG_EDITOR_SAVE_HM     = 111
+export const MSG_EDITOR_FBX_CONV    = 112
 
 /*
 export const MSG_EDITOR_GAME        = 103
@@ -61,3 +62,5 @@ export const GD_ACTION_DEATH         = 6
 export const ASSETS_LAND_TILES       = 1
 export const ASSETS_LAND_LAYER       = 2
 export const ASSETS_LAND_HEIGHTMAP   = 4
+export const ASSETS_LIBRARY          = 8
+export const ASSETS_HEXGRID          = 16

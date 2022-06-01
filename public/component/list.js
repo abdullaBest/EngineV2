@@ -1,4 +1,4 @@
-let el = this.el
+const el = this.el
 let selected = null
 
 this.onselect = ()=>{}
@@ -13,6 +13,13 @@ this.get_selected_id = ()=> {
         return ''
     }   
     return selected.dataset.id
+}
+
+this.get_selected_level = ()=>{
+    if (selected===null){
+        return '0'
+    }   
+    return selected.dataset.l
 }
 
 const select = (e)=>{
@@ -56,6 +63,57 @@ this.add_or_update = (parent_id,id,name,color='white')=>{
         a.innerText = name
     }
 }
+
+this.show_level = (l)=>{
+    for (let i=0;i<el.children.length;i++){
+        const level = parseInt(el.children[i].dataset.l)
+        if (level==l){
+            el.children[i].style.display = 'block'
+        }
+    }
+}
+
+this.hide_level = (l)=>{
+    for (let i=0;i<el.children.length;i++){
+        const level = parseInt(el.children[i].dataset.l)
+        if (level==l){
+            el.children[i].style.display = 'none'
+        }
+    }
+}
+
+
+this.show_group = (name)=>{
+    const s = String(name)
+    for (let i=0;i<el.children.length;i++){
+        if (el.children[i].dataset.p===s){
+            el.children[i].style.display = 'block'
+        }
+    }
+}
+
+this.hide_group = (name)=>{
+    const s = String(name)
+    for (let i=0;i<el.children.length;i++){
+        if (el.children[i].dataset.p===s){
+            el.children[i].style.display = 'none'
+        }
+    }
+}
+
+this.switch_visibility_group = (name)=>{
+    const s = String(name)
+    for (let i=0;i<el.children.length;i++){
+        if (el.children[i].dataset.p===s){
+            if (el.children[i].style.display==='none'){
+                el.children[i].style.display = 'block'
+            }else{
+                el.children[i].style.display = 'none'
+            }
+        }
+    }
+}
+
 
 this.delete = (id)=>{
     for (let i=0;i<el.children.length;i++){

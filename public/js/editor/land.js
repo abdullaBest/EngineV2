@@ -31,11 +31,13 @@ const save_tiles_list = ()=>{
 const update_land_info = ()=>{
     const w = $.LAND.CONF
 
+    let m = LAND.getViewGPUUsage()
+
     let s = 'width: <span>' + LAND.getMapWidth() +'</span>, '
+    s = s + 'view: <span>' + UTILS.bytesToSize(m) + '</span>'
+    s = s + '<br>'
     s = s + 'paint: <span>' + LAND.getPaintWidth() + 'px</span>, '
     s = s + 'hm: <span>' + LAND.getHeightmapWidth() + 'px</span>, '
-    let m = LAND.getViewGPUUsage()
-    s = s + 'view: <span>' + UTILS.bytesToSize(m) + '</span>'
 
     w.chunks.info.el.innerHTML = s
 }
@@ -299,6 +301,10 @@ const conf_prepare = ()=>{
 
 export const land_texture_sel = (mode,n)=>{
     if (mode===1){  // заменяем
+        let idx = tiles.indexOf(n)
+        if (idx!==-1){  // переставляем если уже есть 
+            tiles[idx] = tiles[tile_selected]
+        }
         tiles[tile_selected] = n
     }
     if (mode===2){  // добавляем

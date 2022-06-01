@@ -10,6 +10,7 @@ import * as ASSETS     from './assets.js'
 import * as INFO       from './info.mjs'
 import * as HEIGHTMAP  from './heightmap.js'
 import * as PAINTLAYER from './paintlayer.js' 
+import * as HEXGRID    from './hexgrid.js' 
 import {
     WebGLRenderTarget,
     RGBAFormat,
@@ -23,6 +24,7 @@ import {
     EqualStencilFunc,
     Vector3,
     Vector4,
+    Color,
 } from '/lib/three.js'
 
 let ground_mesh             = null
@@ -30,7 +32,7 @@ let ground_material         = null
 
 let map_width               = 1                 // размер карты
 export let half_map_width   = 0.5               // 
-let chunk_width             = 1                 // ширина и высота чанка
+export let chunk_width      = 1                 // ширина и высота чанка
 let texture_size            = 64                // размер текстуры на чанк
 let normal_factor           = 0.04              // сила изменения направления нормали для освещения
 let heightmap_cx            = 1                 // сетка чанка карты высот
@@ -75,6 +77,10 @@ const prepare_ground_material = ()=>{
         u.normalf   = { value: 0.0 },
         u.hstep     = { value: 0.0 },
         u.maxw      = { value: 0.0 },
+        u.gridf     = { value: 0.0 },
+        u.grid      = { value: null },
+        u.gridscale = { value: 0.0 },
+        u.gridcolor = { value: HEXGRID.get_grid_color() },
 
         //console.log(shader.vertexShader)
         //console.log(shader.fragmentShader)
@@ -122,12 +128,16 @@ const prepare_ground_material = ()=>{
             'uniform vec3 diffuse;',
             [
                 'uniform sampler2D mask;',
+                'uniform sampler2D grid;',
                 //'uniform sampler2D nmap;',
                 'uniform vec3 diffuse;',
                 'varying vec4 rp;',
                 'uniform float mx;',
                 'uniform float my;',
                 'uniform float size;',
+                'uniform float gridf;',
+                'uniform float gridscale;',
+                'uniform vec3 gridcolor;',
             ].join('\n')
         )
     
@@ -138,6 +148,18 @@ const prepare_ground_material = ()=>{
                 '#ifdef USE_MAP',
                 'vec2 _uv1 = vec2(vUv.x,vUv.y);',
                 'vec4 _tcolor1 = texture2D(map, _uv1);',
+                // маска сетки
+                '_uv1.x = rp.x - mx;',
+                '_uv1.y = rp.z - my;',
+                //'if (gridf>0.0 && abs(_uv1.x)<size && abs(_uv1.y)<size){',
+                    //'float _d = _uv1.x*_uv1.x+_uv1.y*_uv1.y;',
+                    //'float _gridf = min(gridf,gridf*(size)/_d);',
+                    'float _gridf = gridf;',
+                    '_uv1 = vec2(rp.x*gridscale,rp.z*gridscale);',
+                    'float _grid = texture2D(grid, _uv1).r;',
+                    '_tcolor1 = mix(_tcolor1, vec4(gridcolor,0.0), _grid*_gridf);',
+                //'}',
+
                 // проекция маски
                 '_uv1.x = rp.x - mx;',
                 '_uv1.y = rp.z - my;',
@@ -147,6 +169,7 @@ const prepare_ground_material = ()=>{
                     'vec4 _tcolor2 = texture2D(mask, _uv1);',
                     '_tcolor1 = mix(_tcolor1, _tcolor2, 0.2);',
                 '}',
+                //
                 // шум
                 //'_tcolor1 = mix(_tcolor1, texture2D(nmap, _uv1), 0.1);',
                 //
@@ -418,6 +441,17 @@ export const over_heightmap = (ray,result)=>{
     result.z = result.z + ray.direction.z*distance
 }
 
+// определяем положение указателя на карте высот
+export const heightmap_height = (x,z)=>{
+    // переводим положени луча в пространство карты высот
+    const scale = HEIGHTMAP.getWidth()/map_width
+
+    let rx = (x + half_map_width)*scale
+    let ry = (z + half_map_width)*scale
+
+    // находим пересечение, если distance=0 то пересечения нет
+    return HEIGHTMAP.point_in_heightmap(rx,ry)
+}
 // ставим флаг на обновление всех видимых слоев
 export const refresh_paintlayer = ()=>{
     const l = VIEWPORT.viewport_free_n
@@ -449,17 +483,22 @@ const render_block = (x,y,ground)=>{
     m.material.map = ground.texture
 
     RENDER.setProgram(m)
-    RENDER._setValue('hmap',    HEIGHTMAP.getTexture() )
-    RENDER._setValue('map',     ground.texture )
-    RENDER._setValue('ox',      rx )
-    RENDER._setValue('oy',      ry )
-    RENDER._setValue('mask',    ASSETS.getMask(2) )
-    RENDER._setValue('mx',      ground_mesh.material.uniforms.mx.value )
-    RENDER._setValue('my',      ground_mesh.material.uniforms.my.value )
-    RENDER._setValue('size',    ground_mesh.material.uniforms.size.value )
-    RENDER._setValue('normalf', normal_factor )
-    RENDER._setValue('hstep',   HEIGHTMAP.getStep() )
-    RENDER._setValue('maxw',    map_width )
+    RENDER._setValue('hmap',     HEIGHTMAP.getTexture() )
+    RENDER._setValue('map',      ground.texture )
+    RENDER._setValue('ox',       rx )
+    RENDER._setValue('oy',       ry )
+    RENDER._setValue('mask',     ASSETS.getMask(2) )
+    RENDER._setValue('mx',       ground_mesh.material.uniforms.mx.value )
+    RENDER._setValue('my',       ground_mesh.material.uniforms.my.value )
+    RENDER._setValue('size',     ground_mesh.material.uniforms.size.value )
+    RENDER._setValue('normalf',  normal_factor )
+    RENDER._setValue('hstep',    HEIGHTMAP.getStep() )
+    RENDER._setValue('maxw',     map_width )
+    RENDER._setValue('grid',     HEXGRID.get_grid_texture() )
+    RENDER._setValue('gridf',    HEXGRID.get_grid_f() )
+    RENDER._setValue('gridscale',HEXGRID.get_grid_scale() )
+    //RENDER._setValue('gridcolor',HEXGRID.get_grid_color() )
+
     RENDER._renderObject(m)
 }
 
@@ -483,7 +522,7 @@ export const render_after = ()=>{
         if (!t.ground_ready){
             PAINTLAYER.paint(t.x,t.y,t.ground)
             t.ground_ready = true
-            break;
+            //break;
         }
     }
 }

@@ -86,9 +86,14 @@ const messagesJSON = (user,s)=>{
             EDITOR.save_land_param(id,s[2])
         }
         break;
-        case INFO.MSG_EDITOR_SAVE_HEX:{
+        case INFO.MSG_EDITOR_HEX_PARAM:{
             let id   = parseInt(s[1])
-            EDITOR.save_hexgrid(id,s[2])
+            EDITOR.save_hex_param(id,s[2])
+        }
+        break;
+        case INFO.MSG_EDITOR_HEX_GRID:{
+            let id   = parseInt(s[1])
+            EDITOR.save_hex_grid(id,s[2])
         }
         break;
         case INFO.MSG_EDITOR_SAVE_TMAP:{

@@ -187,10 +187,10 @@ document.addEventListener( 'click', (e)=>{
 }, false )
 
 document.addEventListener( 'contextmenu', (e)=>{
-    //if (event.target.nodeName==='CANVAS'){
+    if (e.target.nodeName==='CANVAS'){
     //    if (EDITOR.active) { editor_right_click() }    
-    //}
-    e.preventDefault()
+        e.preventDefault()
+    }
 })
 
 /*

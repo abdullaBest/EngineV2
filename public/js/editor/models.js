@@ -334,6 +334,7 @@ const model_object_select = (name)=>{
     if (sell_obj===null){
         return
     }
+    $.MODEL_EDIT.model_selected_obj = name
     //
     let m = materials[name]
     const w = $.MODEL_EDIT.material
@@ -448,6 +449,7 @@ export const prepare = (_models)=>{
     }
 
     $.ASSETS.model_edt.el.onclick = ()=>{
+        $.MODEL_EDIT.model_selected_n = model_selected_n
         get_model(model_selected_n, m=>{
             materials = m.m
             $.MODEL_EDIT.n.el.value = m.n

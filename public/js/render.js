@@ -1082,12 +1082,12 @@ export const classic_render = ()=>{
 		renderer.clear(false,true,true)
         renderer.abd_render_start2(scene,camera,renderTarget)
  */       
+        //update_matrix(scene)
+        //render_mesh(scene)
   
         main_render(delta)
         //_render_quad()
 
-        //update_matrix(scene)
-        //render_mesh(scene)
 
         renderer.abd_render_end()
 

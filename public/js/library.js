@@ -117,6 +117,10 @@ const asset_prepare = (o)=>{
 
             if (a.mesh!==''){
                 const mesh = model.g.scene.getObjectByName(a.mesh)
+                if (!mesh){
+                    console.error('error model:',a.model,', mesh:',a.mesh)
+                    continue
+                }
                 const clone = UTILS.fullClone(mesh)
 
                 if (a.scale){
@@ -194,7 +198,6 @@ export const add = (name,info)=>{
     //
     info_prepare(o,info)
     //
-    asset_load(o)
     //
     //if (o.vox_make){
     //    o.vox = VOX.make(o.mesh)
@@ -211,6 +214,8 @@ export const add = (name,info)=>{
     library_n.push(info_n)
 
     library.set(name,o)
+
+    asset_load(o)
 
     return o
 }

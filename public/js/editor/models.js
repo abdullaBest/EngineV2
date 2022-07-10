@@ -7,8 +7,11 @@ import * as NET     from '/js/net.js'
 import * as RENDER  from '/js/render.js'
 import { show, hide, isVisible } from '/js/strapony.js'
 import { sel_dialog } from '/js/editor/textures.js'
-import { get_model, prepare_material } from '/js/assets.js'
+import { get_model, prepare_material, prepare_materials_for_scene, script_exists, get_script } from '/js/assets.js'
 import { GLTFExporter } from '/lib/GLTFExporter.js'
+import {
+    Group
+} from '/lib/three.js'
 
 let models = []
 let curr_gltf = null    // gltf
@@ -40,7 +43,7 @@ const model_update_material = ()=>{
             transparent : w.material.transparent.el.checked,
             dside       : w.material.dside.el.checked,
             alphatest   : parseFloat(w.material.alphatest.el.value),
-            env         : w.material.env.el.value
+            env         : parseInt(w.material.env.el.dataset.n)
         })
         materials[sell_obj.name] = m
     }else{
@@ -52,8 +55,8 @@ const model_update_material = ()=>{
         m.roughness   = parseFloat(w.material.roughness.el.value)
         m.transparent = w.material.transparent.el.checked
         m.dside       = w.material.dside.el.checked
-        m.alphatest   = parseFloat(w.material.alphatest.el.value)
-        m.env         = w.material.env.el.value
+        m.alphatest   = parseFloat(w.material.alphatest.el.value),
+        m.env         = parseInt(w.material.env.el.dataset.n)
     }
 }
 
@@ -134,6 +137,10 @@ const models_prepare = ()=>{
             name,
             m: materials,
             g: null,
+            s: {
+                name   : w.scripts.title.el.value,
+                params : w.scripts.params.el.value
+            }
         })
 
         NET.send_json([INFO.MSG_EDITOR_MODEL, model ])
@@ -181,6 +188,66 @@ const models_prepare = ()=>{
         RENDER.update_matrix(curr_obj)
     }
 
+    w.vis.switch.el.onclick = ()=>{
+        if (sell_obj===null ){
+            return
+        }
+
+        sell_obj.visible = !sell_obj.visible
+        //
+        let name = sell_obj.name
+        let type = sell_obj.type
+        let count = 0
+        switch(sell_obj.type){
+            case 'SkinnedMesh':
+            case 'Mesh':
+                if (sell_obj.geometry.index){
+                    count = sell_obj.geometry.index.count/3
+                }else{
+                    if (sell_obj.geometry.attributes.position){
+                        count = sell_obj.geometry.attributes.position.count/3
+                    }
+                }
+            break;
+        }
+        let vis = ''
+        if (!sell_obj.visible){
+            vis = 'x'
+        }
+        w.scene.update(name,name+'|'+type+'|'+count+'|'+vis)
+    }
+
+    w.vis.switchall.el.onclick = ()=>{
+        if (sell_obj===null ){
+            return
+        }
+
+        curr_obj.traverse((o)=>{
+            o.visible = !o.visible
+            //
+            let name = o.name
+            let type = o.type
+            let count = 0
+            switch(o.type){
+                case 'SkinnedMesh':
+                case 'Mesh':
+                    if (o.geometry.index){
+                        count = o.geometry.index.count/3
+                    }else{
+                        if (o.geometry.attributes.position){
+                            count = o.geometry.attributes.position.count/3
+                        }
+                    }
+                break;
+            }
+            let vis = ''
+            if (!o.visible){
+                vis = 'x'
+            }
+            w.scene.update(name,name+'|'+type+'|'+count+'|'+vis)
+        })
+    }
+
     w.material.clear.el.onclick = ()=>{
         w.material.defuse.el.dataset.n  = 0
         w.material.normals.el.dataset.n = 0
@@ -196,21 +263,31 @@ const models_prepare = ()=>{
         show(w.material)
         hide(w.transform)
         hide(w.animations)
+        hide(w.scripts)
     }
     w.tabs.t_transform.el.onclick = ()=>{
         hide(w.material)
         show(w.transform)
         hide(w.animations)
+        hide(w.scripts)
     }
     w.tabs.t_animations.el.onclick = ()=>{
         hide(w.material)
         hide(w.transform)
         show(w.animations)
+        hide(w.scripts)
+    }
+    w.tabs.t_scripts.el.onclick = ()=>{
+        hide(w.material)
+        hide(w.transform)
+        hide(w.animations)
+        show(w.scripts)
     }
     //
     w.material.defuse.el.onclick  = ()=> sel_dialog(3)
     w.material.normals.el.onclick = ()=> sel_dialog(4)
     w.material.arm.el.onclick     = ()=> sel_dialog(5)
+    w.material.env.el.onclick     = ()=> sel_dialog(6)
     //
     w.material.material.el.onchange    = material_set_param
     w.material.metalness.el.onchange   = material_set_param
@@ -218,7 +295,57 @@ const models_prepare = ()=>{
     w.material.transparent.el.onchange = material_set_param
     w.material.dside.el.onchange       = material_set_param
     w.material.alphatest.el.onchange   = material_set_param
-    w.material.env.el.onchange         = material_set_param
+
+    w.scripts.title.el.oninput = ()=>{
+        let script_name = w.scripts.title.el.value
+        if (script_exists(script_name)){
+            if (curr_obj===null){
+                curr_obj = new Group()
+                curr_gltf = {
+                    scene : curr_obj,
+                    animations: [],
+                }
+                sell_obj = curr_obj
+                model_show_scene()
+                model_gltf_changed = true
+            }
+            get_script(script_name,(f)=>{
+                w.scripts.params.el.value = JSON.stringify(f(),undefined,2)
+            })
+        }
+    }
+
+    w.scripts.seed.el.onclick = ()=>{
+        const param = JSON.parse(w.scripts.params.el.value)
+        param.seed = Math.trunc(Math.random()*Number.MAX_SAFE_INTEGER)
+        w.scripts.params.el.value = JSON.stringify(param,undefined,2)
+    }
+
+    w.scripts.run.el.onclick = ()=>{
+        let script_name = w.scripts.title.el.value
+        if (script_exists(script_name)){
+            
+            model_gltf_changed = true
+
+            if (curr_obj===null){
+                curr_obj = new Group()
+                curr_gltf = {
+                    scene : curr_obj,
+                    animations: [],
+                }
+                sell_obj = curr_obj
+            }
+
+            get_script(script_name,(f)=>{
+                const param = JSON.parse(w.scripts.params.el.value)
+                param.obj = curr_obj
+                f(param,()=>{
+                    prepare_materials_for_scene(materials,curr_obj)
+                    model_show_scene()
+                })
+            })
+        }
+    }
 }
 
 export const textures_sel = (mode,n)=>{
@@ -227,6 +354,7 @@ export const textures_sel = (mode,n)=>{
     if (mode===3){ a = w.material.defuse.el }
     if (mode===4){ a = w.material.normals.el }
     if (mode===5){ a = w.material.arm.el }
+    if (mode===6){ a = w.material.env.el }
     
     a.dataset.n = n
     a.src  = '/t/preview/'+n+'.png'
@@ -343,29 +471,31 @@ const model_object_select = (name)=>{
         w.defuse.el.dataset.n    = 0
         w.normals.el.dataset.n   = 0
         w.arm.el.dataset.n       = 0
+        w.env.el.dataset.n       = 0
         w.defuse.el.src          = '/t/preview/0.png'
         w.normals.el.src         = '/t/preview/0.png'
         w.arm.el.src             = '/t/preview/0.png'
+        w.env.el.src             = '/t/preview/0.png'
         w.metalness.el.value     = 0
         w.roughness.el.value     = 0
         w.transparent.el.checked = false
         w.dside.el.checked       = false
         w.alphatest.el.value     = 0
-        w.env.el.value           = ''
     }else{
         w.material.el.value      = m.type
         w.defuse.el.dataset.n    = m.defuse
         w.normals.el.dataset.n   = m.normals
         w.arm.el.dataset.n       = m.arm
+        w.env.el.dataset.n       = m.env
         w.defuse.el.src          = '/t/preview/'+m.defuse+'.png'
         w.normals.el.src         = '/t/preview/'+m.normals+'.png'
         w.arm.el.src             = '/t/preview/'+m.arm+'.png'
+        w.env.el.src             = '/t/preview/'+m.env+'.png'
         w.metalness.el.value     = m.metalness
         w.roughness.el.value     = m.roughness
         w.transparent.el.checked = m.transparent
         w.dside.el.checked       = m.dside
         w.alphatest.el.value     = m.alphatest
-        w.env.el.value           = m.env
     }
 }
 
@@ -394,6 +524,10 @@ const model_show_scene = ()=>{
                 color = 'white'
                 if (el.geometry.index){
                     count = el.geometry.index.count/3
+                }else{
+                    if (el.geometry.attributes.position){
+                        count = el.geometry.attributes.position.count/3
+                    }
                 }
                 sel = el
             break;
@@ -444,6 +578,12 @@ export const prepare = (_models)=>{
 
     $.ASSETS.model_add.el.onclick = ()=>{
         $.MODEL_EDIT.n.el.value = models.length
+        $.MODEL_EDIT.model_selected_n = $.MODEL_EDIT.n.el.value
+        curr_gltf = null
+        curr_obj  = null
+        sell_obj  = null
+        $.MODEL_EDIT.scene.clear()
+        $.MODEL_EDIT.scripts.title.el.value = ''
         show($.MODEL_EDIT)
         $.MODEL_EDIT.file.el.click()
     }
@@ -455,6 +595,8 @@ export const prepare = (_models)=>{
             $.MODEL_EDIT.n.el.value = m.n
             $.MODEL_EDIT.group.el.value = m.group
             $.MODEL_EDIT.name.el.value = m.name
+            $.MODEL_EDIT.scripts.title.el.value = m.s.name
+            $.MODEL_EDIT.scripts.params.el.value = m.s.params
             
             model_gltf_changed = false
             curr_gltf = m.g

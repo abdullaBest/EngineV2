@@ -4,16 +4,19 @@
 */
 import * as INFO    from '/js/info.mjs'
 import * as NET     from '/js/net.js'
+import * as RENDER  from '/js/render.js'
+import * as ASSETS  from '/js/assets.js'
 import {show, hide, isVisible} from '/js/strapony.js'
 import { textures_sel } from '/js/editor/models.js'
 import { land_texture_sel } from '/js/editor/land.js'
+
 
 let textures = []
 let group_selected   = 'root'
 let txt_selected_tag = null
 let txt_selected_n   = 0
 let txt_updated      = 0
-let mode = 0 //
+let mode = 0 // 1,2-land 3,4,5-model edit, 6-env
 
 
 const txt_load_prepare = ()=>{
@@ -60,6 +63,7 @@ const txt_load_prepare = ()=>{
         const name      = w.name.el.value
         const n         = Math.trunc(w.n.el.value)
         const type      = Math.trunc(w.type.el.value)
+        const mapping   = Math.trunc(w.mapping.el.value)
         const alpha     = w.alpha.el.checked
         const mipmap    = w.mipmap.el.checked
         const normalmap = w.normalmap.el.checked
@@ -79,6 +83,7 @@ const txt_load_prepare = ()=>{
                 alpha,
                 mipmap,
                 normalmap,
+                mapping,
             }
         ])
 
@@ -123,26 +128,76 @@ const txt_load_prepare = ()=>{
         w.height.el.value = ''
         w.n.el.value      = textures.length
         w.type.el.value   = 0
+        w.mapping.el.value = 0
         w.alpha.el.checked = false
         w.mipmap.el.checked = true
         w.normalmap.el.checked = false
         show($.TXT_LOAD)
+        w.tab_btn1.el.click()
         w.file.el.click()
     }
     $.ASSETS.txt_edt.el.onclick = ()=>{
         txt_edit(txt_selected_n)
     }
     $.ASSETS.txt_sel.el.onclick = ()=>{        
-        // defuse, normal map, arm
-        if (mode===3 || mode===4 || mode===5 ){
+        // defuse, normals, arm, env
+        if (mode===3 || mode===4 || mode===5 || mode===6 ){
             textures_sel(mode,txt_selected_n)
         }
+        // land
         if (mode===1 || mode===2){
             land_texture_sel(mode,txt_selected_n)
+        }
+        // env
+        if (mode>=7 && mode<=12){
+            env_texture(mode,txt_selected_n)
         }
         hide($.ASSETS)
     }
 }
+
+const env_prepare = ()=>{
+    const w = $.TXT_LOAD
+    const c = $.TXT_LOAD.ENV.cube
+    c.nx.el.onclick = ()=> sel_dialog(7)
+    c.px.el.onclick = ()=> sel_dialog(8)
+    c.ny.el.onclick = ()=> sel_dialog(9)
+    c.py.el.onclick = ()=> sel_dialog(10)
+    c.nz.el.onclick = ()=> sel_dialog(11)
+    c.pz.el.onclick = ()=> sel_dialog(12)
+
+    w.ENV.generate.el.onclick = ()=>{
+        RENDER.generate_env_from_cube([
+            c.px.el.dataset.n+'.png',
+            c.nx.el.dataset.n+'.png',
+            c.py.el.dataset.n+'.png',
+            c.ny.el.dataset.n+'.png',
+            c.pz.el.dataset.n+'.png',
+            c.nz.el.dataset.n+'.png'
+        ],(canvas)=>{
+            w.img.el.src = canvas.toDataURL()
+
+            w.img.el.onload = ()=>{
+                w.file_name.el.innerText = 'pmremgenerator'
+                w.o_size.el.innerText  = w.img.el.naturalWidth+' x '+w.img.el.naturalHeight
+                w.width.el.value  = w.img.el.naturalWidth
+                w.height.el.value = w.img.el.naturalHeight
+                w.mapping.el.value = 1
+            }
+            //
+            w.tab_btn1.el.click()
+        })
+    }
+}
+
+const env_texture = (mode,n)=>{
+    const w = $.TXT_LOAD.ENV.cube
+    let a = [w.nx,w.px,w.ny,w.py,w.nz,w.pz][mode-7].el
+
+    a.dataset.n = n
+    a.src = 't/preview/'+n+'.png?'+Date.now()+'>'
+}
+
 
 const group_sel = (group)=>{
     group_selected = group
@@ -225,14 +280,17 @@ const txt_edit = (id)=>{
         w.height.el.value = a.height
         w.n.el.value      = a.n
         w.type.el.value   = a.type
+        w.mapping.el.value = a.mapping
         w.alpha.el.checked = a.alpha
         w.mipmap.el.checked = a.mipmap
         w.normalmap.el.checked = a.normalmap
     }
     //
     show($.TXT_LOAD)
+    w.tab_btn1.el.click()
 }
 
+//
 export const sel_dialog = (_mode)=>{
     mode = _mode
     show($.ASSETS)
@@ -242,5 +300,6 @@ export const sel_dialog = (_mode)=>{
 export const prepare = (_textures)=>{
     textures = _textures
     txt_load_prepare()
+    env_prepare()
     galery_fill()
 }

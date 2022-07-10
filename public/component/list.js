@@ -35,6 +35,7 @@ const select = (e)=>{
 this.add = (parent_id,id,name,color='white')=>{
     let l = 0
     let p = ''
+
     if (parent_id!==null){
         for (let i=0;i<el.children.length;i++){
             if (el.children[i].dataset.id===parent_id){
@@ -44,21 +45,57 @@ this.add = (parent_id,id,name,color='white')=>{
             }
         }
     }
+
     let a = document.createElement('div')
     a.style.marginLeft = (l*4)+'px'
     a.style.color = color
     a.dataset.id  = id
-    a.dataset.p   = p
-    a.dataset.l   = l
     a.innerText   = name
     a.onclick     = select
+    a.dataset.p   = p
+    a.dataset.l   = l
     el.appendChild(a)
+}
+
+this.insert = (parent_id,id,name,color='white')=>{
+    let l = 0
+    let p = ''
+    let _el = el
+
+    for (let i=0;i<el.children.length;i++){
+        if (el.children[i].dataset.id===parent_id){
+            _el = el.children[i]
+            p = parent_id
+            l = parseInt(_el.dataset.l)+1 
+            break
+        }
+    }
+
+    const a = document.createElement('div')
+    a.style.marginLeft = (l*4)+'px'
+    a.style.color = color
+    a.dataset.id  = id
+    a.innerText   = name
+    a.onclick     = select
+    a.dataset.p   = p
+    a.dataset.l   = l
+
+    el.insertBefore(a,_el.nextSibling)
 }
 
 this.add_or_update = (parent_id,id,name,color='white')=>{
     let a = el.querySelector('[data-id="'+id+'"]')
     if (!a){
         this.add(parent_id,id,name,color)
+    }else{
+        a.innerText = name
+    }
+}
+
+this.insert_or_update = (parent_id,id,name,color='white')=>{
+    let a = el.querySelector('[data-id="'+id+'"]')
+    if (!a){
+        this.insert(parent_id,id,name,color)
     }else{
         a.innerText = name
     }

@@ -98,11 +98,9 @@ const new_obj = (lib,prop)=>{
     })
 }
 
-// определяет координаты гекса по мировым координатам
-export const set_cursor_postion = (_rx,_rz)=>{
-
-    const rx = _rx/scale
-    const rz = _rz/scale
+export const get_hex_coordinates = (world_x,world_z)=>{
+    const rx = world_x/scale
+    const rz = world_z/scale
     const ix = Math.trunc(rx)
     const iy = Math.trunc(rz)
 
@@ -170,7 +168,14 @@ export const set_cursor_postion = (_rx,_rz)=>{
     //
     cursor[0] = Math.trunc(_hexb[n])
     cursor[1] = Math.trunc(_hexb[n+1]/0.75)
-    //
+}
+
+// определяет координаты гекса по мировым координатам
+export const set_cursor_postion = (_rx,_rz)=>{
+
+    get_hex_coordinates(_rx,_rz)
+    
+    // ограничиваем размером карты
     cursor[0] = Math.min(Math.max(cursor[0],0),count_x-1)
     cursor[1] = Math.min(Math.max(cursor[1],0),count_y-1)
 
@@ -197,7 +202,6 @@ export const update_selector = ()=>{
     }
     selector = UTILS.create_selector_mesh(scale*0.5)
 }
-
 
 export const prepareParam = (param)=>{
 
@@ -231,6 +235,61 @@ export const add_to_chunk = (o)=>{
     let cy = Math.trunc(ry/LAND.chunk_width)
 
     CHUNKS.add_sorted(o,cx,cy)
+}
+
+export const add = (name,x,y)=>{
+    const cell = get(x,y)
+    for (let i=0;i<cell.length;i++){
+        if (cell[i].name===name){
+            return
+        }
+    }
+
+    const lib = LIBRARY.get(name)
+    if (!lib){
+        return
+    }
+    const o = new_obj(lib,Object.assign({name:lib.name},lib.prop))
+    o.x  = x
+    o.y  = y
+    if (lib.prop.rot!==undefined){
+        o.prop.rot = Math.trunc(Math.random()*360)
+        o.rot_y = RENDER.deg_to_rad(obj.prop.rot)
+    }
+    cell.push(o)
+    //
+    add_to_chunk(o)
+    //
+}
+
+export const remove = (x,y,n)=>{
+    const cell = get(x,y)
+
+    const o = cell[n]
+    cell.splice(n,1)
+    CHUNKS.remove(o)
+}
+
+export const removeAll = (x,y)=>{
+    const cell = get(x,y)
+    for (let i=0;i<cell.length;i++){
+        const o = cell[i]
+        CHUNKS.remove(o)
+    }
+    cell.length = 0
+}
+
+export const remove_by_name = (x,y,name)=>{
+    const cell = get(x,y)
+
+    for (let i=0;i<cell.length;i++){
+        const o = cell[i]
+        if (o.name===name){
+            cell.splice(i,1)
+            CHUNKS.remove(o)
+            break;
+        }
+    }
 }
 
 export const prepareGrid = (_grid)=>{

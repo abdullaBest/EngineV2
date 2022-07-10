@@ -100,7 +100,6 @@
                         </div>
                     </div>
 
-
                     <div id=".MODELS">
 
                         <div id=".groups" component="list">
@@ -120,7 +119,7 @@
 
                 <div>
                     <div>
-                        
+                        <button id=".lib_sel">select</button>
                     </div>
                     <div>
                         <button id=".txt_add">add</button>
@@ -140,47 +139,107 @@
         <div id="TXT_LOAD" component="dialog" class="dialog_window" style="display: none;">
             <div class="dialog">
                 <div>
+                    <div id=".tab_btn1" class="tab">Load</div>
+                    <div id=".tab_btn2" class="tab">Env</div>
                     <div class="title">Texture loader</div>
                     <div class="close"></div>
                 </div> 
     
-                <div style="display: flex;overflow: auto;">
+                <div>
+                    <div style="display: flex;overflow: auto;">
+                        <div style="width:150px;margin:5px 5px 5px 5px;">
+                            <label class="file_btn">...
+                                <input id=".file" type="file">
+                            </label>
+                            <div id=".file_name" style="overflow-wrap: anywhere"></div>
+                            <div id=".o_size"></div>
+    
+                            <input id=".n" type="number" value=1 disabled>
+    
+                            <input id=".group" type="text" list="textures_group_names" placeholder="group">
+                            <datalist id="textures_group_names"></datalist>
+                            <input id=".name" type="text"  placeholder="name">
+                            <input id=".width" type="number">
+                            x
+                            <input id=".height" type="number">
+    
+                            <div>
+                                format:
+                                <select id=".type">
+                                    <option value=0>ETC1S</option>
+                                    <option value=1>UASTC</option>
+                                    <option value=2>PNG</option>
+                                </select>
+                            </div>
+                            <div>
+                                mapping:
+                                <select id=".mapping">
+                                    <option value=0>UVMapping</option>
+                                    <option value=1>CubeUVReflection</option>
+                                </select>
+                            </div>
 
-                    <div style="width:150px;margin:5px 5px 5px 5px;">
-                        <label class="file_btn">...
-                            <input id=".file" type="file">
-                        </label>
-                        <div id=".file_name" style="overflow-wrap: anywhere"></div>
-                        <div id=".o_size"></div>
-
-                        <input id=".n" type="number" value=1 disabled>
-
-                        <input id=".group" type="text" list="textures_group_names" placeholder="group">
-                        <datalist id="textures_group_names"></datalist>
-                        <input id=".name" type="text"  placeholder="name">
-                        <input id=".width" type="number">
-                        x
-                        <input id=".height" type="number">
-
-                        <div>
-                            format:
-                            <select id=".type">
-                                <option value=0>ETC1S</option>
-                                <option value=1>UASTC</option>
-                                <option value=2>PNG</option>
-                            </select>
+    
+                            <label>alpha:<input id=".alpha" type="checkbox"></label>
+                            <label>mipmap:<input id=".mipmap" type="checkbox"></label>
+                            <label>normalmap:<input id=".normalmap" type="checkbox"></label>
+                               
+                            <button id=".save">save</button>
                         </div>
+                        <div style="flex-grow:1;overflow: auto;margin:5px 5px 5px 0;">
+                            <img id=".img" style="max-width: 512px;max-height: 512px;">
+                        </div>
+                    </div>      
 
-                        <label>alpha:<input id=".alpha" type="checkbox"></label>
-                        <label>mipmap:<input id=".mipmap" type="checkbox"></label>
-                        <label>normalmap:<input id=".normalmap" type="checkbox"></label>
-                           
-                        <button id=".save">save</button>
+                    <div id=".ENV">
+                        
+                        <div id=".cube">
+                            <div></div>
+                            <div>
+                                <img id=".py" data-n="0" src="">
+                                <span>Y+</span>
+                            </div>
+                            <div></div>
+                            <div></div>
+
+                            <div>
+                                <img id=".nx" data-n="0" src="">
+                                <span>X-</span>
+                            </div>
+                            <div>
+                                <img id=".nz" data-n="0" src="">
+                                <span>Z-</span>
+                            </div>
+                            <div>
+                                <img id=".px" data-n="0" src="">
+                                <span>X+</span>
+                            </div>
+                            <div>
+                                <img id=".pz" data-n="0" src="">
+                                <span>Z+</span>
+                            </div>
+                            <div></div>
+                            <div>
+                                <img id=".ny" data-n="0" src="">
+                                <span>Y-</span>
+                            </div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                        <button id=".generate">generate</button>
+
                     </div>
-                    <div style="flex-grow:1;overflow: auto;margin:5px 5px 5px 0;">
-                        <img id=".img" style="max-width: 512px;max-height: 512px;">
+                </div>
+
+                <div>
+                    <div>
+                        <button id=".lib_sel">select</button>
                     </div>
-                 
+                    <div>
+                        <button id=".txt_add">add</button>
+                        <button id=".txt_edt">edit</button>
+                        <button id=".txt_sel">select</button>
+                    </div>
                 </div>
             </div>
         </div>   
@@ -210,8 +269,7 @@
                             scale:<input id=".scale" type="number" value=1>
                             |
                             <button id=".switch">hide/show</button>
-                            |
-                            <button id=".tolib">to lib</button>
+                            <button id=".switchall">all</button>
                         </div>
                         <div id=".scene" component="list">
                         </div>
@@ -219,6 +277,7 @@
                             <button id=".t_material">material</button>
                             <button id=".t_transform">transform</button>
                             <button id=".t_animations">animations</button>
+                            <button id=".t_scripts">scripts</button>
                         </div>
                         <div id=".material">
                             <table>
@@ -239,6 +298,7 @@
                                     <td>defuse</td>
                                     <td>normals</td>
                                     <td>arm</td>
+                                    <td>env</td>
                                 </tr>
                                 <tr>
                                     <td>
@@ -249,6 +309,9 @@
                                     </td>
                                     <td>
                                         <img id=".arm" data-n="0" src="">
+                                    </td>	
+                                    <td>
+                                        <img id=".env" data-n="0" src="">
                                     </td>	
                                 </tr>
                             </table>
@@ -277,13 +340,6 @@
                                     <td>alpha test:</td>
                                     <td>
                                         <input id=".alphatest" type="number" value="0" step="0.1">
-                                    </td>
-                                    <td>environment:</td>
-                                    <td>
-                                        <select id=".env">
-                                            <option value=""></option>
-                                            <option value="grass">grass</option>
-                                        </select>
                                     </td>
                                 </tr>
                             </table>
@@ -321,23 +377,34 @@
                                     <input id=".r_z" type="number" value="0.0">
                                 </td>
                             </tr>
-                        </table>
-                        <button id=".clean">С‡РёСЃС‚РєР°</button>
-                        <button id=".remove_group">СѓР±СЂР°С‚СЊ РіСЂСѓРїРїСѓ</button>
-                    </div>
-                    <div id=".animations">
-                        <div>
-                            <select id=".list"></select>
+                            </table>
+                            <button id=".clean">С‡РёСЃС‚РєР°</button>
+                            <button id=".remove_group">СѓР±СЂР°С‚СЊ РіСЂСѓРїРїСѓ</button>
                         </div>
-                        <button id=".play">play</button>
-                        <button id=".stop">stop</button>
-                        <button id=".mem">mem</button>
-                        <div>
-                            <input id=".new_name" type="text">
-                            <button id=".rename">rename</button>
+                        <div id=".animations">
+                            <div>
+                                <select id=".list"></select>
+                            </div>
+                            <button id=".play">play</button>
+                            <button id=".stop">stop</button>
+                            <button id=".mem">mem</button>
+                            <div>
+                                <input id=".new_name" type="text">
+                                <button id=".rename">rename</button>
+                            </div>
+                        </div>
+                        <div id=".scripts">
+                            <input id=".title" type="text" list="generator_scripts" placeholder="name">
+                            <datalist id="generator_scripts"></datalist>
+                            <div>
+                                <textarea id=".params">
+
+                                </textarea>
+                            </div>
+                            <button id=".seed">seed</button>
+                            <button id=".run">run</button>
                         </div>
                     </div>
-                </div>
                 </div>
             </div>
         </div>
@@ -527,8 +594,13 @@
 
                         </div>
                         <div>
+                            <button id=".btn_save">save</button>
+                            |
+                            <button id=".btn_add">+</button>
+                            <button id=".btn_del">-</button>
+                        </div>
+                        <div>
                             <select id=".list" size="10">
-
                             </select>
                         </div>
                         <div id=".props">
@@ -543,33 +615,23 @@
                             </table>
                         </div>
                         <div>
-                            <button id=".btn_save">save</button>
-                            <div id=".pos"></div>
-                            <div id=".pos2"></div>
-                            <div id=".objects" component="list">
-                            
-                            </div>
-                            <div class="hexgrid_table">
-                                <table id=".prop">
-                                
-                                </table>
-                            </div>
-                            <button id=".btn_add">add</button>
-                            <button id=".btn_del">del</button>
-                            <select id=".lib"></select>
-                            <br>
+                            <button id=".fill_add">+</button>
+                            <button id=".fill_del">-</button>
+                            <button id=".fill_clear">clear</button>
+                            <select id=".fill_list" size="5">
+                            </select>
                             <label>
                                 fill
-                                <input id=".chk_fill" name="fill" type="checkbox">
+                                <input id=".fill_active" name="fill" type="checkbox">
                             </label>
                             <label>
                                 empty
-                                <input id=".chk_empty" name="empty" type="checkbox" checked>
+                                <input id=".fill_empty" name="empty" type="checkbox" checked>
                             </label>
                             <br>
                             <label>
                                 clear
-                                <input id=".chk_clear" name="clear" type="checkbox">
+                                <input id=".fill_clean" name="clean" type="checkbox">
                             </label>
             
                             <button id=".generator">generate</button>

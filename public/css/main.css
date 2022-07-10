@@ -283,6 +283,34 @@ input[type="color"]{
     float: right;
 }
 
+
+#TXT_LOAD\.ENV\.cube{
+    display: grid; 
+    grid-template-rows: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 0px;
+    width: calc(64px * 4);
+    height: calc(64px * 3);
+}
+
+#TXT_LOAD\.ENV\.cube div{
+    position: relative;
+    width: 64px;
+    height: 64px;
+}
+
+#TXT_LOAD\.ENV\.cube div img{
+    width: 64px;
+    height: 64px;
+}
+
+#TXT_LOAD\.ENV\.cube div span{
+    pointer-events: none;
+    position: absolute;
+    left: 23px;
+    top: 22px;
+}
+
 #ASSETS\.TEXTURES {
     display: flex;
     height: 100%;
@@ -413,6 +441,9 @@ input[type="color"]{
 #MODEL_EDIT\.material\.arm{
     width: 64px;
 }
+#MODEL_EDIT\.material\.env{
+    width: 64px;
+}
 
 #MODEL_EDIT input[type=number]{
     width:50px;
@@ -426,6 +457,9 @@ input[type="color"]{
 }
 #MODEL_EDIT\.animations\.new_name{
     width:150px;
+}
+#MODEL_EDIT\.scripts{
+    display: none;
 }
 
 /*
@@ -553,6 +587,10 @@ input[type="color"]{
 }
 
 #HEXGRID\.edit\.list{
+    width: 100%;
+}
+
+#HEXGRID\.edit\.fill_list{
     width: 100%;
 }
 

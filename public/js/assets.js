@@ -10,10 +10,12 @@ import {
     get_MeshStandardMaterial, 
     get_MeshBasicMaterial, 
 } from '/js/render.js'
-import { RepeatWrapping, LinearFilter, NearestFilter, Texture } from '/lib/three.js'
+import { DoubleSide, FrontSide, RepeatWrapping, LinearFilter, NearestFilter, Texture, LinearEncoding, UVMapping, CubeUVReflectionMapping } from '/lib/three.js'
 
 let textures = []
 let models   = []
+let scripts  = []
+let scripts_func = {}
 const masks  = new Array(16).fill(null)    // маски
 
 const _assets_by_name = new Map()
@@ -28,11 +30,28 @@ export const check_callback_flag = (f)=>{ callback_flag & f }
 export const setCallback         = (f)=>{ manager_callback = f }
 export const getEmptyTexture     = ()=>emptyTexture
 
+const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor
+
 const set_texture_params = (t)=>{
     t.anisotropy = 4
-    t.wrapS = RepeatWrapping
-    t.wrapT = RepeatWrapping
+    t.wrapS      = RepeatWrapping
+    t.wrapT      = RepeatWrapping
+    t.encoding   = LinearEncoding 
 
+    if (t.name!==''){
+        const a = textures[t.name]
+        //
+        if (!t.isCompressedTexture){
+            t.generateMipmaps = a.mipmap
+        }
+        //
+        if (a.mapping===0){
+            t.mapping = UVMapping
+        }else{
+            t.mapping = CubeUVReflectionMapping
+        }
+    }
+    
     update_requests_count()
 }
 
@@ -99,6 +118,8 @@ export const get_texture = (n)=>{
         }else{
             a.t = ktx2loader.load(u,set_texture_params)
         }
+        a.t.name = a.n
+        //
         requestCount = requestCount + 1
     }
     return a.t
@@ -153,22 +174,42 @@ export const prepare_material = (materials,obj)=>{
             m = get_MeshStandardMaterial()
 
             m.map          = get_texture(material.defuse)
-            m.normalMap    = get_texture(material.normals)
-            m.aoMap        = get_texture(material.arm)
-            m.roughnessMap = m.aoMap
-            m.metalnessMap = m.aoMap
+            if (material.normals!==0){
+                m.normalMap = get_texture(material.normals)
+            }
+            if (material.arm!==0){
+                m.aoMap        = get_texture(material.arm)
+                m.roughnessMap = m.aoMap
+                m.metalnessMap = m.aoMap
+            }
+            if (material.env!==0){
+                m.envMap = get_texture(material.env)
+            }
+
+            m.roughness    = material.roughness
+            m.metalness    = material.metalness
+
+            m.alphaTest    = material.alphatest
+            m.side         = material.dside?DoubleSide:FrontSide
+            m.transparent  = material.transparent
         }
         break;
         default:{    // MeshBasicMaterial
             m = get_MeshBasicMaterial()
 
             m.map = get_texture(material.defuse)
+
+            m.alphaTest   = material.alphatest
+            m.side        = material.dside?DoubleSide:FrontSide
+            m.transparent = material.transparent
         }
     }
     obj.material = m
 }
 
 const prepare_materials = (model)=>traverse(model.g.scene, obj => prepare_material(model.m,obj) )    
+
+export const prepare_materials_for_scene = (materials,scene)=>traverse(scene, obj => prepare_material(materials,obj) )    
 
 
 export const get_model = (n,callback)=>{
@@ -191,12 +232,40 @@ export const get_model = (n,callback)=>{
     }
 }
 
+export const script_exists = (name)=>{
+    if (scripts.indexOf(name)!==-1){
+        return true
+    }
+    return false
+}
+
+export const get_script = (name,callback)=>{
+    fetch('s/'+name+'.js?'+Date.now())
+    .then(r => r.text())
+    .then(txt => {
+        const f = new Function('params','callback',txt)
+        scripts_func[name] = f
+        callback(f)
+    })
+}
+
 export const getMask = n => masks[n]
 export const getMasksCount = () => masks.length
 
-export const prepareEditor = (_textures,_models)=>{
+export const prepareEditor = (_textures,_models,_scripts)=>{
     textures = _textures
-    models = _models
+    models   = _models
+    scripts  = _scripts
+
+    for (let i=0;i<scripts.length;i++){
+        const name = scripts[i]
+        const type = name.split('_')
+        if (type[0]==='models'){
+            const opt = document.createElement('option')
+            opt.value = name
+            $.generator_scripts.el.appendChild(opt)
+        }
+    }
 }
 
 
@@ -219,6 +288,7 @@ export const prepare = new Promise((resolve,reject)=>{
         t.anisotropy      = 1
         t.wrapS           = RepeatWrapping
         t.wrapT           = RepeatWrapping
+        t.mapping         = UVMapping
 
         masks[i] = t
     }

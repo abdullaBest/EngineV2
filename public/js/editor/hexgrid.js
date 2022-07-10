@@ -12,6 +12,8 @@ import * as UTILS     from '/js/utils.js'
 import * as LIBRARY   from '/js/library.js'
 import * as HEXGRID   from '/js/hexgrid.js'
 
+import { sel_dialog } from '/js/editor/library.js'
+
 let selected_position = [0,0]
 
 export const setParam = ()=>{
@@ -45,7 +47,7 @@ const updateInfo = ()=>{
 
     const map_width = LAND.getMapWidth()
     //const scale = HEXGRID.getScale()
-    HEXGRID.set_cursor_postion(map_width,map_width)
+    HEXGRID.get_hex_coordinates(map_width,map_width)
 
     width = Math.trunc(HEXGRID.cursor[0])
     height = Math.trunc(HEXGRID.cursor[1])
@@ -61,6 +63,26 @@ const updateInfo = ()=>{
     w.conf.info.el.innerHTML = s
 }
 
+const save_grid = ()=>{
+    const data = []
+
+    const grid = HEXGRID.getGrid()
+    for (let i=0;i<grid.length;i++){
+        const cell = grid[i]
+        const _cell = []
+        for (let j=0;j<cell.length;j++){
+            _cell.push(cell[j].prop)
+        }
+        data.push(_cell)
+    }
+    //
+    NET.send_json([
+        INFO.MSG_EDITOR_HEX_GRID,
+        NET.game_id,
+        data,
+    ])
+}
+
 const prepareConf = ()=>{
     const w = $.HEXGRID
 
@@ -73,6 +95,13 @@ const prepareConf = ()=>{
         HEXGRID.set_grid_f(intensity)
 
         HEXGRID.update_selector()
+
+        let rx = HEXGRID.get_rx(selected_position[0],selected_position[1])
+        let rz = HEXGRID.get_ry(selected_position[1])
+
+        HEXGRID.selector.position.x = rx - LAND.half_map_width
+        HEXGRID.selector.position.z = rz - LAND.half_map_width
+        HEXGRID.selector.position.y = LAND.heightmap_height(HEXGRID.selector.position.x,HEXGRID.selector.position.z)+0.1
         
         updateInfo()
     }
@@ -149,9 +178,9 @@ const prepareConf = ()=>{
     w.conf.create.el.onclick = ()=>{
         const map_width = LAND.getMapWidth()
         const scale = HEXGRID.getScale()
-        HEXGRID.set_cursor_postion(map_width,map_width)
+        HEXGRID.get_hex_coordinates(map_width,map_width)
 
-        let width = Math.trunc(HEXGRID.cursor[0])
+        let width  = Math.trunc(HEXGRID.cursor[0])
         let height = Math.trunc(HEXGRID.cursor[1])
         HEXGRID.create(width,height)
     }
@@ -178,12 +207,29 @@ const prepareConf = ()=>{
             param,
         ])
 
-        NET.send_json([
-            INFO.MSG_EDITOR_HEX_GRID,
-            NET.game_id,
-            HEXGRID.getGrid(),
-        ])
+        save_grid()
     }
+
+    w.edit.btn_add.el.onclick = ()=>sel_dialog(0)
+    w.edit.btn_del.el.onclick = ()=>{
+        const n = parseInt(w.edit.list.el.value)
+        HEXGRID.remove(selected_position[0],selected_position[1],n)
+        update_list()
+    }
+    w.edit.btn_save.el.onclick = ()=>save_grid()
+
+    w.edit.fill_add.el.onclick = ()=>sel_dialog(1)
+    w.edit.fill_del.el.onclick = ()=>{
+        if (w.edit.fill_list.el.selectedIndex ===''){
+            return
+        }
+        const n = w.edit.fill_list.el.selectedIndex 
+        $.HEXGRID.edit.fill_list.el.remove(n)
+    }
+    w.edit.fill_clear.el.onclick = ()=>{
+        $.HEXGRID.edit.fill_list.el.innerHTML=''
+    }
+
 }
 
 export const set_position = (mouse)=>{
@@ -263,9 +309,52 @@ export const select = ()=>{
     HEXGRID.selector.position.z = rz - LAND.half_map_width
     HEXGRID.selector.position.y = LAND.heightmap_height(HEXGRID.selector.position.x,HEXGRID.selector.position.z)+0.1
 
+    if ($.HEXGRID.edit.fill_active.el.checked){
+        if ($.HEXGRID.edit.fill_clean.el.checked){
+            HEXGRID.removeAll(selected_position[0],selected_position[1])
+        }else{
+            let count = $.HEXGRID.edit.fill_list.el.children.length
+    
+            if ($.HEXGRID.edit.fill_empty.el.checked){
+                const cell = HEXGRID.get(selected_position[0],selected_position[1])
+                if (cell.length>0){
+                    count = 0
+                }
+            }
+    
+            if (count>0){
+                let ind = Math.trunc(Math.random()*count)
+                let a = $.HEXGRID.edit.fill_list.el.children[ind]
+                let name = a.value
+                HEXGRID.add(name,selected_position[0],selected_position[1])
+            }
+        }
+    
+    }
+
     update_list()
 }
 
+export const hexgrid_lib_sel = (mode,level,group,name)=>{
+    if (mode===0){
+        if (level===1){
+            HEXGRID.add(name,selected_position[0],selected_position[1])
+        }
+    }
+    if (mode===1){
+        if (level===1){
+            if ($.HEXGRID.edit.fill_list.el.querySelector(`option[value="${name}"`)===null){
+                let l = $.HEXGRID.edit.fill_list.el
+                let opt = document.createElement('option')
+                opt.value = name
+                opt.innerText = name
+                l.appendChild(opt)
+            }
+        }
+    }
+    update_list()
+    console.log(level,group,name)
+}
 
 export const prepare = ()=>{
     prepareConf()

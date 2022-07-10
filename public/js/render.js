@@ -19,6 +19,7 @@ import {
     VSMShadowMap,
     FogExp2,
     Vector2,
+    CubeTexture,
     CubeTextureLoader,
     AmbientLight,
     DirectionalLight,
@@ -70,6 +71,8 @@ import {
     TextureLoader,
     RepeatWrapping,
 
+    PMREMGenerator,
+    HalfFloatType,
     DefaultLoadingManager,
 } from '/lib/three.js'
 import { TransformControls } from '/lib/TransformControls.js'
@@ -261,7 +264,7 @@ export const update_matrix = (m)=>{
 export const render_mesh = (m)=>{
 
     if (m.isMesh || m.isSkinnedMesh || m.isLine) {
-        if ( renderer.abd_frustum(m) ){
+        if ( m.visible && renderer.abd_frustum(m) ){
             renderer.abd_render_obj ( m, scene, camera, m.material )
         }
     }
@@ -273,7 +276,7 @@ export const render_mesh = (m)=>{
 
             const o = l[p]
             if (o.isMesh || o.isSkinnedMesh || o.isLine) {
-                if ( renderer.abd_frustum(o) ){
+                if ( o.visible && renderer.abd_frustum(o) ){
                     renderer.abd_render_obj ( o, scene, camera, o.material )
                 }
             }
@@ -774,7 +777,12 @@ export const get_target_floats = (t)=>{
 }
 
 export const target_to_cavas = (t)=>{
-    const _data = new Uint8Array(t.width*t.height*4)
+    let _data = null
+    if (t.texture.type===HalfFloatType){
+        _data = new Uint16Array(t.width*t.height*4)
+    }else{
+        _data = new Uint8Array(t.width*t.height*4)
+    }
     renderer.readRenderTargetPixels ( t, 0, 0, t.width, t.height, _data)
 
 
@@ -845,6 +853,83 @@ export const target_fill = (t,r,g,b)=>{
     color.b = 0
     //renderer.setRenderTarget(null)
     renderer.setClearColor(color)
+}
+
+const decodeFloat16 = (binary)=>{
+    const exponent = (binary & 0x7C00) >> 10,
+          fraction = binary & 0x03FF
+    return (binary >> 15 ? -1 : 1) * (
+        exponent ?
+        (
+            exponent === 0x1F ?
+            fraction ? NaN : Infinity :
+            Math.pow(2, exponent - 15) * (1 + fraction / 0x400)
+        ) :
+        6.103515625e-5 * (fraction / 0x400)
+    )
+}
+
+export const generate_env = (images)=>{
+    const c = new CubeTexture()
+    c.images = images
+
+    const t = pmremgenerator.fromCubemap(c)
+
+    const _data = new Uint16Array(t.width*t.height*4)
+    renderer.readRenderTargetPixels ( t, 0, 0, t.width, t.height, _data)
+
+    for (let i=0;i<_data.length;i++){
+        let a = decodeFloat16(_data[i])
+        if (a!==0){
+            console.log(a)
+        }
+    }
+
+}
+
+export const generate_env_from_cube = (urls,callback)=>{
+    new CubeTextureLoader().setPath('/t/resized/').load(urls,(c)=>{
+        const t = pmremgenerator.fromCubemap(c)
+        pmremgenerator.texture = t.texture
+
+        const _data = new Uint16Array(t.width*t.height*4)
+        renderer.readRenderTargetPixels ( t, 0, 0, t.width, t.height, _data)
+    
+        let min = 0
+        let max = 0
+
+        let canvas = document.createElement('canvas')
+        canvas.width = t.width
+        canvas.height = t.height
+        let ctx = canvas.getContext('2d')
+        let imgData = ctx.createImageData(t.width,t.height)
+        let data = imgData.data
+
+        for (let y=0;y<t.height;y++){
+            for (let x=0;x<t.width;x++){
+                let i = (((t.height-1)-y)*t.width+x)*4
+                let a1 = decodeFloat16(_data[i+0])
+                let a2 = decodeFloat16(_data[i+1])
+                let a3 = decodeFloat16(_data[i+2])
+                let a4 = decodeFloat16(_data[i+3])
+                //
+                let p = (y*t.width + x)*4
+                data[p+0] = Math.trunc(a1*255)
+                data[p+1] = Math.trunc(a2*255)
+                data[p+2] = Math.trunc(a3*255)
+                data[p+3] = Math.trunc(a4*255)
+            }
+        }
+
+        ctx.putImageData(imgData, 0, 0)
+        canvas.style.position = 'absolute'
+        canvas.style.left = '0'
+        canvas.style.top = '0'
+        canvas.style.zIndex = '1000'
+        canvas.style.width = t.width+'px'
+        canvas.style.height = t.height+'px'
+        callback(canvas)
+    })
 }
 
 export const group_to_scene = (a)=>{
@@ -959,6 +1044,8 @@ rt1.depthTexture            = new DepthTexture()
 rt1.depthTexture.format     = DepthFormat
 rt1.depthTexture.type       = FloatType //UnsignedIntType //FloatType
 //----------------------------------------
+
+const pmremgenerator = new PMREMGenerator(renderer)
 
 export const camera     = new PerspectiveCamera( 45, WIDTH/HEIGHT, 2, 8192 )
 //export const camera   = new OrthographicCamera( -4096, 4096, -4096, 4096, 0.1, 8192 )

@@ -11,8 +11,12 @@ import * as CAMERA    from '/js/camera_orbit.js'
 import * as UTILS     from '/js/utils.js'
 import * as LIBRARY   from '/js/library.js'
 
+import {show, hide, isVisible} from '/js/strapony.js'
+import { hexgrid_lib_sel } from '/js/editor/hexgrid.js'
+
 const group_color = '#afafaf'
 const name_color  = '#ffffff'
+let mode = 0
 
 const save_library = ()=>{
     const data = LIBRARY.export_library()
@@ -76,6 +80,12 @@ export const add_mesh_to_asset = (model,mesh)=>{
             + a.value.substring(e, a.value.length)
 }
 
+export const sel_dialog = (_mode)=>{
+    mode = _mode
+    show($.ASSETS)
+    $.ASSETS.tab_btn1.el.click()
+}
+
 export const prepare = (lib)=>{
     const w = $.ASSETS.LIBRARY
     const list = w.list
@@ -88,7 +98,7 @@ export const prepare = (lib)=>{
         groups.add(o.group)
 
         list.add_or_update('', o.group, o.group, group_color)
-        list.add(o.group, o.group+':'+o.name, o.name, name_color)
+        list.insert(o.group, o.group+':'+o.name, o.name, name_color)
     }
 
     //
@@ -114,7 +124,7 @@ export const prepare = (lib)=>{
         save_library()
 
         list.add_or_update('', info.group, info.group, group_color)
-        list.add(info.group, info.group+':'+info.name, info.name, name_color)
+        list.insert(info.group, info.group+':'+info.name, info.name, name_color)
 
         list.show_group(info.group)
         list.select(info.group+':'+info.name)
@@ -124,7 +134,7 @@ export const prepare = (lib)=>{
 
         const oldname  = w.edit.oldname.el.value
         const oldgroup = w.edit.oldgroup.el.value
-        if (oldname!==info.name){
+        if (oldname!==info.name || oldgroup!==info.group){
             LIBRARY.remove(oldname)
             list.delete(oldgroup+':'+oldname)
         }
@@ -134,7 +144,7 @@ export const prepare = (lib)=>{
         save_library()
 
         list.add_or_update('', info.group, info.group, group_color)
-        list.add_or_update(info.group, info.group+':'+info.name, info.name, name_color)
+        list.insert_or_update(info.group, info.group+':'+info.name, info.name, name_color)
 
         list.show_group(info.group)
         list.select(info.group+':'+info.name)
@@ -143,6 +153,7 @@ export const prepare = (lib)=>{
         const oldgroup = w.edit.oldgroup.el.value
         const oldname  = w.edit.oldname.el.value
         LIBRARY.remove(oldname)
+        save_library()
         list.delete(oldgroup+':'+oldname)
     }
 
@@ -175,5 +186,17 @@ export const prepare = (lib)=>{
         a.value = a.value.substring(0, s)
                     + '{model:"'+n+'", mesh:"'+obj+'"}'
                     + a.value.substring(e, a.value.length)
+    }
+
+    $.ASSETS.lib_sel.el.onclick = ()=>{     
+        const group = w.edit.oldgroup.el.value
+        const name  = w.edit.oldname.el.value
+        const l = parseInt(list.get_selected_level())
+  
+        hexgrid_lib_sel(mode,l,group,name)
+
+        if (mode!==1){
+            hide($.ASSETS)
+        }
     }
 }

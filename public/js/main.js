@@ -14,7 +14,7 @@ import * as ASSETS    from './assets.js'
 import * as LIBRARY   from './library.js'
 import * as HEXGRID   from './hexgrid.js'
 
-import { prepare as texture_prepare, set_texture} from './editor/textures.js' 
+import { prepare as texture_prepare, set_texture } from './editor/textures.js' 
 import { prepare as models_prepare, render as models_editor_render, fbx_converted, set_model } from './editor/models.js' 
 import { prepare as land_prepare, prepare_game as land_prepare_game, set_mouse_position, set_point} from './editor/land.js' 
 import { prepare as hexgrid_prepare, setParam as hexgrid_set_param, set_position as hex_set_position, select as hex_select } from './editor/hexgrid.js' 
@@ -196,7 +196,7 @@ const on_message = (type,m)=>{
         // активируем редактор
         case INFO.MSG_EDITOR_INIT:
             console.log(m)
-            ASSETS.prepareEditor(m.t,m.m)
+            ASSETS.prepareEditor(m.t,m.m,m.s)
 
             texture_prepare(m.t)
             models_prepare(m.m)

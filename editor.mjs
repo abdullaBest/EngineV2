@@ -13,6 +13,7 @@ let textures = null
 let models   = null
 let _games   = null
 let games    = []
+let scripts  = []
 
 export let mode   = 0      //
 let n        = 0    //
@@ -27,6 +28,7 @@ export const init = (user)=>{
         i : INFO.MSG_EDITOR_INIT,
         t : textures,
         m : models,
+        s : scripts,
         g : _games,
     }))
 }
@@ -42,13 +44,12 @@ export const texture_set = (data)=>{
     mode = 1
 }
 
-const writeToFile = (img_png,filePath)=>{
-    return new Promise((resolve, reject) => {
-        img_png.pack().pipe(fs.createWriteStream(filePath))
-        .on('finish', resolve)
-        .on('error', reject)
-    })
-}
+const writeToFile = (img_png,filePath)=>new Promise((resolve, reject) => {
+    img_png.pack().pipe(fs.createWriteStream(filePath))
+    .on('finish', resolve)
+    .on('error', reject)
+})
+
 
 export const save_texture_original =(message)=>{
     let png_mode = 2
@@ -82,12 +83,39 @@ export const save_texture_resized =(user,message)=>{
     if (texture_data.alpha===true){
         png_mode = 6
     }
+
+    const b = Buffer.from(message)
+
+    const basis_path = path.resolve('./basisu.exe')
+    const png_path   = path.resolve('./public/t/resized/'+texture_data.n+'.png')
+    const alpha_path = path.resolve('./public/t/resized/'+texture_data.n+'_alpha.png')
+    const res_path   = path.resolve('./public/t/')
+
+    mode = mode + 1
+
+    /*
+    if (texture_data.alpha===true){
+        let alpha_png = new PNG.PNG({width: texture_data.width, height: texture_data.height, colorType:0})  //grayscale
+        let i=0
+        for (let y = 0; y < alpha_png.height; y++) {
+            for (let x = 0; x < alpha_png.width; x++) {
+                let idx = (alpha_png.width * y + x) << 2;
+                alpha_png.data[idx + 0] = b[i+3]
+                alpha_png.data[idx + 1] = b[i+3]
+                alpha_png.data[idx + 2] = b[i+3]
+                alpha_png.data[idx + 3] = 255
+                i=i+4
+            }
+        }
+        writeToFile(alpha_png,alpha_path)
+    }
+    */
+    
     let img_png = new PNG.PNG({width: texture_data.width, height: texture_data.height, colorType:png_mode})  
-    let b = Buffer.from(message)
     let i = 0
-    for (var y = 0; y < img_png.height; y++) {
-        for (var x = 0; x < img_png.width; x++) {
-            var idx = (img_png.width * y + x) << 2;
+    for (let y = 0; y < img_png.height; y++) {
+        for (let x = 0; x < img_png.width; x++) {
+            let idx = (img_png.width * y + x) << 2;
             img_png.data[idx + 0] = b[i+0]
             img_png.data[idx + 1] = b[i+1]
             img_png.data[idx + 2] = b[i+2]
@@ -95,14 +123,9 @@ export const save_texture_resized =(user,message)=>{
             i=i+4
         }
     }
-
-    mode = mode + 1
-
-    const basis_path = path.resolve('./basisu.exe')
-    const png_path   = path.resolve('./public/t/resized/'+texture_data.n+'.png')
-    const res_path   = path.resolve('./public/t/')
-
+    
     writeToFile(img_png,png_path).then(()=>{
+
         console.log('texture resized:',texture_data.n)
 
         switch(texture_data.type){
@@ -127,13 +150,19 @@ export const save_texture_resized =(user,message)=>{
                     if (texture_data.normalmap){
                         dop  = dop + ' -normal_map -linear'
                     }
+                    //if (texture_data.alpha){
+                        //dop  = dop + ' -force_alpha'
+                        //dop = dop +' -alpha_file "'+alpha_path+'"'
+                    //}   
 
                     let result = child_process.execSync(basis_path + ' "'+png_path+'" -output_path "'+res_path+'"'+dop)
                     fs.rename(path.join(res_path,texture_data.n+'.ktx2'), path.join(res_path,texture_data.n+'.k') , err=>{if (err)console.log(err)})
+
+                    //fs.unlinkSync(alpha_path)
                 }
                 break;
             case 2:  // PNG
-                fs.copyFileSync(png_path, path.join(res_path,texture_data.n+'.b'))
+                fs.copyFileSync(png_path, path.join(res_path,texture_data.n+'.k'))
                 break;
         }
 
@@ -151,6 +180,7 @@ export const save_texture_resized =(user,message)=>{
             alpha     : texture_data.alpha,
             mipmap    : texture_data.mipmap,
             normalmap : texture_data.normalmap,
+            mapping   : texture_data.mapping,
         })        
 
         USER.send_str(user,JSON.stringify({
@@ -159,8 +189,8 @@ export const save_texture_resized =(user,message)=>{
         }))
 
         fs.writeFileSync('textures.json',JSON.stringify(textures,undefined,2))
+
     })
-   
 }
 
 export const save_texture_preview =(message)=>{
@@ -472,4 +502,27 @@ export const prepare = ()=>{
         const id = _games[i].id 
         games[id] = JSON.parse(fs.readFileSync('games/'+id+'.json')) 
     }
+
+    // SCRIPTS
+    const scripts_path = path.join('public', 's')
+    fs.readdir(scripts_path, (err, files)=>{
+        if (err) {
+            console.log('Unable to scan directory: ' + err)
+            return
+        } 
+        for (let i=0;i<files.length;i++){
+            const s = files[i].split('.')
+            if (s[1]!=='js'){
+                continue
+            }
+
+            scripts.push(s[0])
+        }
+    })
+
+    /*
+    fs.watch(scripts_path,(etype,file)=>{
+        console.log(etype,file)
+    })
+    */
 }
